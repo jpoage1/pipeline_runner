@@ -2,11 +2,11 @@ import sys
 import traceback
 
 
-from core.suite import PipelineSuite
+from pipeline_runner.core.suite import PipelineSuite
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
-    from lib.task_types import SuiteTask
+    from pipeline_runner.lib.task_types import SuiteTask
 
 
 def runner(tasks: Optional[List["SuiteTask"]] = None):

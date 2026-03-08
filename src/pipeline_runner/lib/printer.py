@@ -6,7 +6,7 @@ from typing import List
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from lib.task_types import SuiteTask
+    from pipeline_runner.lib.task_types import SuiteTask
 
 
 def clear_screen():
@@ -65,7 +65,7 @@ class Printer:
 
     def _msg_prefix(self):
         # Format: [ID] for main tasks, [ID.Sub] for subtasks
-        from lib.task_types import SuiteSubTask
+        from pipeline_runner.lib.task_types import SuiteSubTask
 
         if isinstance(self._instance, SuiteSubTask):
             return f"\n[{self._instance.parent_id}.{self._instance.sub_id}] "

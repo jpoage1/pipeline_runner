@@ -1,13 +1,13 @@
 import argparse
 from pathlib import Path
 
-from lib.exceptions import SuiteError
-from lib.task_types import SuiteTask, Task
+from pipeline_runner.lib.exceptions import SuiteError
+from pipeline_runner.lib.task_types import SuiteTask, Task
 
 from typing import TYPE_CHECKING, Optional, List
 
 if TYPE_CHECKING:
-    from lib.task_types import SuiteTask
+    from pipeline_runner.lib.task_types import SuiteTask
 
 
 def load_parser():

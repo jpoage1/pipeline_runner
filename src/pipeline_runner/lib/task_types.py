@@ -7,14 +7,14 @@ from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING
 from shlex import split as shlex_split
 
-from lib.printer import Printer
-from lib.exceptions import TaskError
-from lib.types import typename
+from pipeline_runner.lib.printer import Printer
+from pipeline_runner.lib.exceptions import TaskError
+from pipeline_runner.lib.types import typename
 
 
 if TYPE_CHECKING:
-    from types import Stage
-    from task_types import PipelineSuite
+    from pipeline_runner.lib.types import Stage
+    from pipeline_runner.core.suite import PipelineSuite
 
 
 class Task:
@@ -137,7 +137,7 @@ class SuiteTask(ABC):
     ):
         self.add_deps()
 
-        from lib.task_types import SuiteTask
+        from pipeline_runner.lib.task_types import SuiteTask
 
         if owner is None and not SuiteTask._initialized:
             raise ValueError("Owner is not set")
@@ -164,7 +164,7 @@ class SuiteTask(ABC):
         self._parent = parent
         self.args = self._owner.args
 
-        from lib.task_types import SuiteTask
+        from pipeline_runner.lib.task_types import SuiteTask
 
         if not isinstance(self, SuiteSubTask):
             self._id = SuiteTask._global_counter

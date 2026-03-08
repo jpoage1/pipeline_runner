@@ -1,8 +1,8 @@
 from abc import abstractmethod
 
-from lib.task_types import SuiteTask
-from lib.types import Stage
-from core.suite import PipelineSuite
+from pipeline_runner.lib.task_types import SuiteTask
+from pipeline_runner.lib.types import Stage
+from pipeline_runner.core.suite import PipelineSuite
 
 from typing import Optional, TYPE_CHECKING
 

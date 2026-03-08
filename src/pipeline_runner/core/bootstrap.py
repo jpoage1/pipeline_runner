@@ -5,8 +5,8 @@ import shutil
 from pathlib import Path
 from typing import List
 
-from lib.task_types import SuiteTask
-from lib.types import Stage
+from pipeline_runner.lib.task_types import SuiteTask
+from pipeline_runner.lib.types import Stage
 
 
 class CheckNix(SuiteTask):
