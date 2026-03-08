@@ -6,9 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "pipeline_runner"
 version = "0.1.0"
 dependencies = []
-<<<<<<< HEAD
-=======
 
 [tool.setuptools.packages.find]
 where = ["src"]
->>>>>>> 95c71b0 (Added pyproject.toml)
