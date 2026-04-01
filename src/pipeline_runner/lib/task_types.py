@@ -55,7 +55,7 @@ class Task:
         # 3. Initialize the key
         print(f"Initializing {key}")
         dep = Task._registry[key]
-        task = dep(parent=Task._owner, owner=Task._owner)
+        task = dep(Task._owner, owner=Task._owner)
         Task._loaded[key] = task
         return task
 
@@ -249,6 +249,7 @@ class SuiteTask(ABC):
         self.do_dry_run = func
 
     def run(self):
+        # self.run_deps()
         dry_run = self.dry_run()
         if dry_run:
             return dry_run
