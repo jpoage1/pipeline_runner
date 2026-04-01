@@ -55,7 +55,7 @@ class Task:
         # 3. Initialize the key
         print(f"Initializing {key}")
         dep = Task._registry[key]
-        task = dep(Task._owner, owner=Task._owner)
+        task = dep(parent=Task._owner, owner=Task._owner)
         Task._loaded[key] = task
         return task
 
