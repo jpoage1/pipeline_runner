@@ -13,3 +13,8 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["pipeline_runner*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["src/pipeline_runner/tests"]
+python_files = ["test_*.py", "*_test.py"]

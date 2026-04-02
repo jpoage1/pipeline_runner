@@ -129,3 +129,54 @@ def test_msg_subtask_prefix_integration():
         mock_print.assert_called_once_with(
             "\n[P1.S1] SubTask Action", level=logging.INFO
         )
+
+
+def test_printer_flush_alias():
+    """Verify flush delegates to dump."""
+
+    class MockInstance:
+        def __init__(self, id):
+            self.id = id
+
+    printer = Printer(MagicMock(), MockInstance(id="alias"))
+    with patch.object(printer, "dump") as mock_dump:
+        printer.flush()
+        mock_dump.assert_called_once()
+
+
+def test_printer_id_property_no_instance():
+    """Verify ID property returns safely when instance is unbound."""
+    printer = Printer(MagicMock(), None)
+    assert printer.id is None
+
+
+def test_printer_id_property_bound_instance():
+    """Verify ID property returns the bound instance ID."""
+
+    class MockBoundInstance:
+        id = "BoundID_1"
+
+    printer = Printer(MagicMock(), MockBoundInstance())
+    assert printer.id == "BoundID_1"
+
+
+def test_printer_msg_prefix_standard_task():
+    """Verify base task prefix formatting."""
+
+    class MockBoundInstance:
+        id = "BaseID_2"
+
+    printer = Printer(MagicMock(), MockBoundInstance())
+    assert printer.msg_prefix == "\n[BaseID_2] "
+
+
+def test_printer_msg_prefix_import():
+    """Verify the inner import of SuiteSubTask during msg_prefix execution."""
+    from pipeline_runner.lib.printer import Printer
+    from unittest.mock import MagicMock
+
+    class MockInstance:
+        id = "99"
+
+    printer = Printer(MagicMock(), MockInstance())
+    assert printer.msg_prefix == "\n[99] "

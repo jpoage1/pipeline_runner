@@ -140,3 +140,17 @@ def test_clear_screen_posix(mock_system):
     with patch("os.name", "posix"):
         clear_screen()
         mock_system.assert_called_once_with("clear")
+
+
+@patch("os.system")
+def test_clear_screen(mock_system):
+    """Verify OS-level screen clear delegation."""
+    from pipeline_runner.lib.printer_helpers import clear_screen
+
+    with patch("os.name", "nt"):
+        clear_screen()
+        mock_system.assert_called_with("cls")
+
+    with patch("os.name", "posix"):
+        clear_screen()
+        mock_system.assert_called_with("clear")

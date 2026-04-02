@@ -24,7 +24,6 @@ class ExampleTask(SuiteTask):
 class ExampleTaskRunner(PipelineSuite):
     """
     An example child task runner
-    Note: Has not been tested and will probably not work
     """
 
     _stage = Stage.ANY

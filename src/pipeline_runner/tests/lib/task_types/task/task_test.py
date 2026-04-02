@@ -126,3 +126,30 @@ def test_get_task_name_resolution():
     """Verify resolution of names from both strings and classes."""
     assert Task.get_task_name(MockTaskClass) == "MockTaskClass"
     assert Task.get_task_name("StaticName") == "StaticName"
+
+
+def test_task_exists():
+    """Verify registry presence check."""
+    from pipeline_runner.lib.task_types.task import Task
+
+    Task._registry["ExistingTask"] = MagicMock()
+
+    assert Task.exists("ExistingTask") is True
+    assert Task.exists("NonExistingTask") is False
+
+
+def test_task_get_owner():
+    """Verify owner reference retrieval."""
+    from pipeline_runner.lib.task_types.task import Task
+
+    Task._owner = "TestOwner"
+
+    assert Task.get_owner() == "TestOwner"
+
+
+def test_task_initialized_method():
+    """Verify initialized evaluation evaluates completed dict."""
+    from pipeline_runner.lib.task_types.task import Task
+
+    Task._completed["InitTask"] = True
+    assert Task.initialized("InitTask") is True

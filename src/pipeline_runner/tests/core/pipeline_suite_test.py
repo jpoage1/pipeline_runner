@@ -128,3 +128,40 @@ def test_fail_raises_suite_error():
 
         with pytest.raises((SuiteError, SystemExit)):
             suite.fail("Error message")
+
+
+@patch("argparse.ArgumentParser.parse_args")
+def test_run_no_tasks_selected(mock_parse):
+    """Verify _run fails if neither task nor full_pipeline is specified."""
+    mock_parse.return_value = argparse.Namespace(
+        task=None,
+        full_pipeline=False,
+        root=None,
+        stage=None,
+        dry_run=False,
+        tasks=None,
+        skip=None,
+    )
+    suite = PipelineSuite()
+    from pipeline_runner.lib.exceptions import SuiteError
+
+    with pytest.raises((SuiteError, SystemExit)):
+        suite._run()
+
+
+@patch("argparse.ArgumentParser.parse_args")
+@patch("builtins.print")
+def test_suite_initialization_lock(mock_print, mock_parse):
+    """Verify the parser enforces a singleton lock and logs warnings."""
+    mock_parse.return_value = argparse.Namespace(
+        task=None,
+        full_pipeline=True,
+        root=None,
+        stage=None,
+        dry_run=False,
+        tasks=None,
+        skip=None,
+    )
+    suite = PipelineSuite()
+    suite._parser(None)
+    mock_print.assert_called_with("Parser already initialized")
