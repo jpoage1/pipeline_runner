@@ -6,7 +6,7 @@ from pipeline_runner.core.suite import PipelineSuite
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
-    from pipeline_runner.lib.task_types import SuiteTask
+    from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
 
 def runner(tasks: Optional[List["SuiteTask"]] = None):

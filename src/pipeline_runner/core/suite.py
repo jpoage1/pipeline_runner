@@ -2,12 +2,11 @@ import argparse
 from pathlib import Path
 
 from pipeline_runner.lib.exceptions import SuiteError
-from pipeline_runner.lib.task_types import SuiteTask, Task
+from pipeline_runner.lib.task_types.suite_task import SuiteTask
+from pipeline_runner.lib.task_types.task import Task
+from pipeline_runner.lib.types import typename
 
-from typing import TYPE_CHECKING, Optional, List
-
-if TYPE_CHECKING:
-    from pipeline_runner.lib.task_types import SuiteTask
+from typing import Optional, List
 
 
 def load_parser():
@@ -57,7 +56,7 @@ class PipelineSuite(SuiteTask):
 
         self._owner = self
         self._parser(parser)
-        super().__init__(self, *args, owner=self, *kwargs)
+        super().__init__(self, *args, owner=self, **kwargs)
 
         self._parent = self
 
@@ -66,12 +65,12 @@ class PipelineSuite(SuiteTask):
         self.kwargs = kwargs
         self._all_tasks = all_tasks
 
-    def _parser(self, parser: argparse.ArgumentParser):
+    def _parser(self, parser: Optional[argparse.ArgumentParser] = None):
 
-        parser = load_parser()
+        parser = parser or load_parser()
         self._owner.args = vars(parser.parse_args())
 
-        def initialized():
+        def initialized(*args, **kwargs):
             print("Parser already initialized")
 
         self._parser = initialized

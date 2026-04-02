@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List
 
-from pipeline_runner.lib.task_types import SuiteTask
+from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.types import Stage
 
 
