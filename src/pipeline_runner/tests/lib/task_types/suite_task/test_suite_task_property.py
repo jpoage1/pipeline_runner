@@ -60,29 +60,29 @@ def test_suitetask_cwd_inheritance():
     owner = MockOwner()
     parent = MagicMock()
     # Mock parent having a cwd property
-    parent.cwd = Path("/inherited/path")
+    parent.cwd = "/inherited/path"
 
     task = ConcreteTask(parent, owner)
-    assert task.cwd == Path("/inherited/path")
+    assert task.cwd == "/inherited/path"
 
 
 def test_suitetask_cwd_fallback_to_os_getcwd():
     """Verify fallback to system getcwd if parent lacks cwd."""
     owner = MockOwner()
     parent = MagicMock()
-    # Delete cwd attribute if it exists on the mock
-    if hasattr(parent, "cwd"):
-        del parent.cwd
+
+    parent.cwd = None
+    parent._cwd = None
 
     task = ConcreteTask(parent, owner, cwd=None)
-    assert task.cwd == Path(os.getcwd())
+    assert task.cwd == str(Path(os.getcwd()))
 
 
 def test_suitetask_explicit_cwd():
     """Verify explicit CWD overrides all inheritance."""
     owner = MockOwner()
-    explicit_path = Path("/explicit/path")
-    task = ConcreteTask(MagicMock(), owner, cwd=explicit_path)
+    explicit_path = "/explicit/path"
+    task = ConcreteTask(MagicMock(), owner, cwd=Path(explicit_path))
     assert task.cwd == explicit_path
 
 
@@ -122,7 +122,7 @@ def test_suitetask_dependency_registration(mock_task_add):
 ## Printer Integration
 
 
-@patch("pipeline_runner.lib.printer.Printer")
+@patch("pipeline_runner.lib.task_types.suite_task.Printer")
 def test_suitetask_printer_attachment(mock_printer_class):
     """Verify Printer is instantiated with the correct context."""
     owner = MockOwner()

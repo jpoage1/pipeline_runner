@@ -185,15 +185,17 @@ class SuiteTask(ABC):
 
         if cwd is not None:
             self.print(f"  [CWD] {cwd}")
+
         if disabled:
             self.msg(f"[DISABLED]  [EXEC] {cmd}")
             return ShellOutput()
 
-        working_dir: str = str(cwd or os.getcwd())
-
-        self.msg(f"  [EXEC] {cmd}")
         if self.do_dry_run() and dry_run is not False:
+            self.msg(f"  [DRY-RUN] [EXEC] {cmd}")
             return ShellOutput()
+
+        working_dir: str = str(cwd or os.getcwd())
+        self.msg(f"  [EXEC] {cmd}")
 
         try:
             result = subprocess.run(cmd, shell=shell, check=check, cwd=working_dir)
@@ -323,6 +325,10 @@ class SuiteTask(ABC):
     @property
     def stage(self) -> Stage:
         return self._stage
+
+    @property
+    def last_run(self) -> ShellOutput:
+        return self._last_run
 
     # Legacy getters
 

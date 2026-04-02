@@ -55,7 +55,7 @@ class Printer:
         record = self._create_record(level, *args, **kwargs)
         Printer._history.append(record)
 
-        if Printer.use_queue:
+        if Printer._use_queue:
             Printer._queue.append(record)
         else:
             self.logger.log(level, record.message, **kwargs)
@@ -123,10 +123,6 @@ class Printer:
     @property
     def queue(self):
         return self._queue
-
-    @property
-    def use_queue(self):
-        return self._use_queue
 
     @property
     def logger(self):

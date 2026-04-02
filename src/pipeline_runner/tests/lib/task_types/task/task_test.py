@@ -70,11 +70,11 @@ def test_add_new_task_initialization():
 
 
 def test_add_existing_task_returns_cached_instance():
-    """Verify add() returns the existing instance if already loaded."""
     mock_instance = MagicMock()
+    # Populate the registry so get_task_status doesn't return MISSING
+    Task._registry["MockTaskClass"] = MagicMock()
     Task._loaded["MockTaskClass"] = mock_instance
 
-    # Mock status to be LOADED
     with patch(
         "pipeline_runner.lib.task_types.helpers.get_task_status",
         return_value=TaskStatus.LOADED,

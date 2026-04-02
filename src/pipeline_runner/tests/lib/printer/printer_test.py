@@ -1,6 +1,7 @@
 import pytest
 import json
 import logging
+import builtins
 from pathlib import Path
 from unittest.mock import MagicMock, patch, mock_open
 from pipeline_runner.lib.printer import Printer
@@ -113,21 +114,18 @@ def test_msg_handles_no_args():
 ## Complex Scenario: SubTask Prefix
 
 
-@patch("pipeline_runner.lib.task_types.suite_sub_task.SuiteSubTask", spec=True)
-def test_msg_subtask_prefix_integration(mock_subtask_class):
+def test_msg_subtask_prefix_integration():
     """Verify msg() uses the parent.id.id format for SubTasks."""
-    parent = MockInstance(id="P1")
-    subtask = MockInstance(id="S1", parent=parent)
+    from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
+    import logging
 
-    def side_effect(obj, cls):
-        if cls.__name__ == "SuiteSubTask":
-            return True
-        return isinstance(obj, cls)
+    subtask = MagicMock(spec=SuiteSubTask)
+    subtask.id = "S1"
+    subtask.parent.id = "P1"
 
-    with patch("builtins.isinstance", side_effect=side_effect):
-        printer = Printer(None, subtask)
-        with patch.object(printer, "print") as mock_print:
-            printer.msg("SubTask Action")
-            mock_print.assert_called_once_with(
-                "\n[P1.S1] SubTask Action", level=logging.INFO
-            )
+    printer = Printer(None, subtask)
+    with patch.object(printer, "print") as mock_print:
+        printer.msg("SubTask Action")
+        mock_print.assert_called_once_with(
+            "\n[P1.S1] SubTask Action", level=logging.INFO
+        )

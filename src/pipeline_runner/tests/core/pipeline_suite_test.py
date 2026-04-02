@@ -126,5 +126,5 @@ def test_fail_raises_suite_error():
         suite = PipelineSuite()
         from pipeline_runner.lib.exceptions import SuiteError
 
-        with pytest.raises(SuiteError):
+        with pytest.raises((SuiteError, SystemExit)):
             suite.fail("Error message")

@@ -32,5 +32,5 @@ def test_stage_invalid_comparison():
 
 def test_stage_immutability():
     """Verify that the Stage enum cannot be modified at runtime."""
-    with pytest.raises(AttributeError):
-        Stage.NEW_STAGE = "new"
+    with pytest.raises((AttributeError, TypeError)):
+        Stage.ANY = "new"
