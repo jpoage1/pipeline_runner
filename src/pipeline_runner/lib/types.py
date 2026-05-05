@@ -1,8 +1,12 @@
+import re
+import subprocess
+
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-import subprocess
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
+
+ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-jklmnpqtyuvwyz])")
 
 
 def typename(t):
@@ -58,10 +62,7 @@ class ShellOutput:
                 return []
             text = out if isinstance(out, str) else out.decode("utf-8", errors="ignore")
             # Strip ANSI escape codes
-            ansi_escape = re.compile(
-                r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-jklmnpqtyuvwyz])"
-            )
-            text = ansi_escape.sub("", text)
+            text = ANSI_ESCAPE.sub("", text)
             return [line.strip() for line in text.splitlines() if line.strip()]
 
         return cls(

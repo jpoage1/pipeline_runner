@@ -42,6 +42,11 @@ def task_context():
 @patch("subprocess.run")
 def test_sh_executes_correctly(mock_run, task_context):
     """Verify sh passes correct arguments to subprocess.run."""
+    # CONFIGURE THE MOCK RETURN VALUE
+    mock_run.return_value = MagicMock(
+        stdout="file1.txt\nfile2.txt", stderr="", returncode=0
+    )
+
     task_context.sh("ls -la", cwd=Path("/tmp"))
 
     mock_run.assert_called_once_with("ls -la", shell=True, check=True, cwd="/tmp")
