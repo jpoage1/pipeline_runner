@@ -46,15 +46,28 @@ class ShellException(Exception):
 class ShellOutput:
     stdout: list[str] = field(default_factory=list)
     stderr: list[str] = field(default_factory=list)
+    returncode: int = 0
 
     @classmethod
     def from_subprocess(
         cls, result: Union[subprocess.CompletedProcess, subprocess.CalledProcessError]
     ) -> "ShellOutput":
-        """Factory method to create ShellOutput from a subprocess result."""
+        # Extract and clean strings immediately
+        def clean(out):
+            if not out:
+                return []
+            text = out if isinstance(out, str) else out.decode("utf-8", errors="ignore")
+            # Strip ANSI escape codes
+            ansi_escape = re.compile(
+                r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-jklmnpqtyuvwyz])"
+            )
+            text = ansi_escape.sub("", text)
+            return [line.strip() for line in text.splitlines() if line.strip()]
+
         return cls(
-            stdout=(result.stdout or "").splitlines(),
-            stderr=(result.stderr or "").splitlines(),
+            stdout=clean(result.stdout),
+            stderr=clean(result.stderr),
+            returncode=result.returncode,
         )
 
     @staticmethod
