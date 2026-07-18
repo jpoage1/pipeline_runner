@@ -57,10 +57,10 @@ in
       runHook preCheck
 
       echo "[check] ruff lint..."
-      ruff check src
+      ruff check src tests
 
       echo "[check] pyright type-check..."
-      pyright --pythonpath ${checkPythonEnv}/bin/python src
+      pyright --pythonpath ${checkPythonEnv}/bin/python src tests
 
       echo "[check] pytest..."
       pytest
