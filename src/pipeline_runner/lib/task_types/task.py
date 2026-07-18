@@ -33,6 +33,12 @@ class Task:
             return Task._loaded[name]
 
         dep_class, args = prepare_task_init(name, Task._registry, Task._owner)
+        if dep_class is None or args is None:
+            # prepare_task_init returns (None, None) when name isn't in the
+            # registry - unreachable here in practice (the MISSING status
+            # check above already raises for that case), but the guard
+            # keeps that fact enforced/verifiable rather than assumed.
+            raise ValueError(f"Dependency {name} does not exist")
         task_instance = dep_class(*args)
 
         Task._loaded[name] = task_instance

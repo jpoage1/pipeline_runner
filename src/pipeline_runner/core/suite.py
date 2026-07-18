@@ -4,9 +4,9 @@ from pathlib import Path
 from pipeline_runner.lib.exceptions import SuiteError
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.task_types.task import Task
-from pipeline_runner.lib.types import typename
+from pipeline_runner.lib.types import typename, ShellOutput
 
-from typing import Optional, List
+from typing import Optional, Sequence
 
 
 def load_parser():
@@ -39,13 +39,28 @@ class PipelineSuite(SuiteTask):
     name = "Pipeline Runner"
     root_dir: Path | None
     _in_nix_shell: bool
-    _owner: "PipelineSuite"
-    all_tasks: Optional[List["SuiteTask"]] = None
+    # Always self in practice (set in __init__) - Optional only because a
+    # mutable attribute override must match its base declaration exactly
+    # (SuiteTask._owner: Optional["PipelineSuite"]), not narrow it.
+    _owner: Optional["PipelineSuite"]
+    # Real attribute, not just something test mocks happen to set on a
+    # MagicMock owner - SuiteTask.get_path()/_require_owner() rely on this
+    # actually existing on a real PipelineSuite instance.
+    paths: dict[str, Path]
+    # Every real caller (health_check's run_health_suite, this module's own
+    # _run() via Task.run(task), and pipeline_runner's own test suite)
+    # passes task *classes*, not instances - Task.add()/Task.run() take a
+    # class or a class name string and instantiate it themselves. The
+    # previous `List["SuiteTask"]` annotation described instances, which
+    # nothing here ever actually passes; fixed at the source rather than
+    # suppressed at each call site, since this project is the source of
+    # truth other projects (e.g. health_check) build on, not the reverse.
+    all_tasks: Optional[Sequence[type["SuiteTask"]]] = None
 
     def __init__(
         self,
         *args,
-        all_tasks: Optional[List["SuiteTask"]] = None,
+        all_tasks: Optional[Sequence[type["SuiteTask"]]] = None,
         root: str | None = None,
         parser: Optional[argparse.ArgumentParser] = None,
         **kwargs,
@@ -61,6 +76,7 @@ class PipelineSuite(SuiteTask):
         self._parent = self
 
         self.root_dir = Path(root) if root else None
+        self.paths = {"root": self.root_dir} if self.root_dir else {}
 
         self.kwargs = kwargs
         self._all_tasks = all_tasks
@@ -68,7 +84,7 @@ class PipelineSuite(SuiteTask):
     def _parser(self, parser: Optional[argparse.ArgumentParser] = None):
 
         parser = parser or load_parser()
-        self._owner.args = vars(parser.parse_args())
+        self._require_owner().args = vars(parser.parse_args())
 
         def initialized(*args, **kwargs):
             print("Parser already initialized")
@@ -79,19 +95,26 @@ class PipelineSuite(SuiteTask):
         """Helper to raise the state-aware exception."""
         raise SuiteError(self, *args, **kwargs)
 
-    def _run(self):
-
+    def _run(self) -> bool | str | None | ShellOutput:
+        # Declared type matches SuiteTask._run()'s own contract, not
+        # narrowed to bool - PipelineSuite is itself a SuiteTask fulfilling
+        # the same abstraction, and subclasses (e.g. ExampleTaskRunner)
+        # legitimately override with narrower concrete behavior of their
+        # own (including returning None), which requires this class not
+        # to have narrowed the contract first.
         Task.__init__(self._owner, self._all_tasks)
         task = self.get_arg("task")
         if task:
             self.msg(f"Starting task: {typename(task)}")
             Task.run(task)
         elif self.get_arg("full_pipeline") is True:
-            for task in self._all_tasks:
+            # _all_tasks defaults to None (no all_tasks= passed to __init__)
+            # - iterate an empty list rather than crashing on `for x in None`.
+            for task in self._all_tasks or []:
                 self.msg(f"Running task: {task}")
                 Task.run(task)
         else:
             self.fail("No tasks have been selected")
 
         Task.run(task)
-        return self
+        return True

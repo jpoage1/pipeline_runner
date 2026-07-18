@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from pipeline_runner.tasks.example_tasks import ExampleTask, ExampleTaskRunner
 

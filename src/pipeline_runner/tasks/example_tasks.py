@@ -17,8 +17,9 @@ class ExampleTask(SuiteTask):
     _deps = []
     name: str = "Start an example task"
 
-    def _run(self):
+    def _run(self) -> bool:
         self.print("Hello World")
+        return True
 
 
 class ExampleTaskRunner(PipelineSuite):
@@ -29,17 +30,16 @@ class ExampleTaskRunner(PipelineSuite):
     _stage = Stage.ANY
     _deps = []
     skip: bool = False
-    _tasks: []
     name: str
     root_dir: Optional["Path"]
     _in_nix_shell: bool
-    _owner: "PipelineSuite"
+    _owner: Optional["PipelineSuite"]
 
     def __init__(self, *args, **kwargs):
         """An example constructor"""
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def _run(self):
+    def _run(self) -> None:
         """An example implementation"""
         pass

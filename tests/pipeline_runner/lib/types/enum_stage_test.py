@@ -31,6 +31,9 @@ def test_stage_invalid_comparison():
 
 
 def test_stage_immutability():
-    """Verify that the Stage enum cannot be modified at runtime."""
+    """Verify that the Stage enum cannot be modified at runtime. Uses
+    setattr() rather than a direct assignment: the assignment is
+    genuinely dynamic here (the whole point is exercising the runtime
+    rejection), not a static one a type checker could ever validate."""
     with pytest.raises((AttributeError, TypeError)):
-        Stage.ANY = "new"
+        setattr(Stage, "ANY", "new")

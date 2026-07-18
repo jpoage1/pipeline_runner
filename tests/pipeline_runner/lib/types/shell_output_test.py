@@ -1,4 +1,3 @@
-import pytest
 import subprocess
 from unittest.mock import MagicMock
 from pipeline_runner.lib.types import ShellOutput

@@ -15,8 +15,15 @@ def resolve_cwd(provided_cwd: Path | None) -> str:
     return str(provided_cwd or os.getcwd())
 
 
-def should_skip(disabled: bool, dry_run_active: bool, force_run: bool) -> bool:
-    """Determines if the command execution should be bypassed."""
+def should_skip(
+    disabled: bool | int | str | None,
+    dry_run_active: bool | int | str | None,
+    force_run: bool | int | str | None,
+) -> bool:
+    """Determines if the command execution should be bypassed. Genuinely
+    duck-typed on truthiness (if disabled: / dry_run_active and ...), not
+    strict bool comparisons - the Union reflects real, tested callers
+    (see test_should_skip_boundary_conditions), not a hedge."""
     if disabled:
         return True
     if dry_run_active and force_run is not False:

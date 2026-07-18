@@ -1,5 +1,3 @@
-import pytest
-from unittest.mock import MagicMock
 from pipeline_runner.lib.types import TaskStatus
 from pipeline_runner.lib.task_types.helpers import (
     validate_task_list,

@@ -1,6 +1,5 @@
 import pytest
 import logging
-import builtins
 from unittest.mock import MagicMock, patch
 from pipeline_runner.lib.printer import Printer
 from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
@@ -32,7 +31,12 @@ def test_printer_init():
     parent = MockParent()
     printer = Printer(parent, instance)
 
-    assert printer.instance.id == "1.1"
+    # Captured in a local first: printer.instance is a property call, and
+    # a type checker won't narrow a None-check across repeated calls to
+    # the same property the way it narrows a plain local variable.
+    bound_instance = printer.instance
+    assert bound_instance is not None
+    assert bound_instance.id == "1.1"
     assert "pipeline.MockInstance" in printer.logger.name
 
 
@@ -121,7 +125,6 @@ def test_msg_prefix_standard_task():
 
 def test_msg_prefix_subtask():
     """Verify prefix formatting for subtasks [ParentID.SubID]."""
-    from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
     from unittest.mock import MagicMock
     from pipeline_runner.lib.printer import Printer
 
@@ -144,7 +147,6 @@ def test_msg_prefix_subtask():
 def test_printer_properties_coverage():
     """Access properties to fulfill coverage execution branches."""
     from pipeline_runner.lib.printer import Printer
-    from unittest.mock import MagicMock
 
     printer = Printer(MagicMock(), MagicMock())
     _ = printer.queue

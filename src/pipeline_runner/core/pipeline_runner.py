@@ -3,13 +3,13 @@ import traceback
 
 
 from pipeline_runner.core.suite import PipelineSuite
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
 if TYPE_CHECKING:
     from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
 
-def runner(tasks: Optional[List["SuiteTask"]] = None):
+def runner(tasks: Optional[Sequence[type["SuiteTask"]]] = None):
 
     runner = PipelineSuite(all_tasks=tasks)
     exit_code = 0

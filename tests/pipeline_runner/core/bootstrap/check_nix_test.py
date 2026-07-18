@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import MagicMock, patch
-from pipeline_runner.tasks.bootstrap import CheckNix,
+from pipeline_runner.core.bootstrap import CheckNix
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def test_check_nix_not_found(mock_which, task_context):
 
     result = task._run()
 
-    assert result is None
+    assert result is False
     task.printer.print.assert_called_with("⬡ Nix tools not found in PATH.")
 
 

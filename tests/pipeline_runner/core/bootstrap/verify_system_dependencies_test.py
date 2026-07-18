@@ -33,6 +33,8 @@ def test_verify_dependencies_continues_when_not_in_nix(task_context):
 
     task = VerifySystemDependencies(parent, owner)
 
-    # _run returns None by default if it falls through (as defined in your src)
+    # _run() always returns True - the "not in nix shell" path is simply
+    # not a failure case (this used to fall through returning None, a
+    # real bug fixed at the source rather than encoded as expected here).
     result = task._run()
-    assert result is None
+    assert result is True

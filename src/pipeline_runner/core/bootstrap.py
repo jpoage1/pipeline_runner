@@ -18,10 +18,10 @@ class CheckNix(SuiteTask):
         super().__init__(*args, **kwargs)
         self.name = "Checking if we are in a nix shell..."
 
-    def _run(self):
+    def _run(self) -> bool:
         if not shutil.which("nix"):
             self.print("⬡ Nix tools not found in PATH.")
-            return
+            return False
 
         # 2. Check if already in a shell
         shell_type = os.environ.get("IN_NIX_SHELL")
@@ -43,10 +43,11 @@ class EnsurePaths(SuiteTask):
         super().__init__(*args, **kwargs)
         self.name = "Setting up bulid path"
 
-    def _run(self):
+    def _run(self) -> bool:
         """Ensure build directory exists"""
         for dir_path in self._dirs:
             dir_path.mkdir(parents=True, exist_ok=True)
+        return True
 
 
 class VerifySystemDependencies(SuiteTask):
@@ -59,8 +60,8 @@ class VerifySystemDependencies(SuiteTask):
         super().__init__(*args, **kwargs)
         self.name = "Verifying System Dependencies"
 
-    def _run(self):
+    def _run(self) -> bool:
         """A basic dependency check"""
-        if self._owner._in_nix_shell:
+        if self._require_owner()._in_nix_shell:
             self.print("Skipping: in nix shell")
-            return True
+        return True

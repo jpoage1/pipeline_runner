@@ -1,12 +1,12 @@
 import pytest
 import os
 import subprocess
-import threading
 import io
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.types import ShellException
+from pipeline_runner.core.pipeline_runner import runner
 
 
 class ConcreteTask(SuiteTask):
@@ -49,7 +49,12 @@ def test_sh_executes_correctly(mock_run, task_context):
 
     task_context.sh("ls -la", cwd=Path("/tmp"))
 
-    mock_run.assert_called_once_with("ls -la", shell=True, check=True, cwd="/tmp")
+    # capture_output=True: sh() previously never actually captured
+    # stdout/stderr in real (non-mocked) execution - fixed at the source
+    # (see suite_task.py's sh()), this asserts the corrected call.
+    mock_run.assert_called_once_with(
+        "ls -la", shell=True, check=True, cwd="/tmp", capture_output=True
+    )
 
 
 @patch("subprocess.run")
@@ -169,7 +174,6 @@ def test_suitetask_print_msg_delegation(task_context):
 
 def test_suitetask_cwd_oserror_fallback():
     """Cover OSError suppression when evaluating parent working directories."""
-    from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
     owner = MockOwner()
     parent = MagicMock()
@@ -251,15 +255,6 @@ def test_get_path_and_cwd(task_context):
     assert task_context.get_cwd() == "/mock/cwd"
 
 
-import pytest
-import runpy
-import sys
-import traceback
-from unittest.mock import MagicMock, patch
-
-from pipeline_runner.core.pipeline_runner import runner
-
-
 @patch("pipeline_runner.core.pipeline_runner.PipelineSuite")
 @patch("builtins.print")
 def test_runner_successful_execution(mock_print, mock_suite_class):
@@ -267,7 +262,7 @@ def test_runner_successful_execution(mock_print, mock_suite_class):
     mock_suite_instance = MagicMock()
     mock_suite_class.return_value = mock_suite_instance
 
-    with patch("sys.exit") as mock_exit:
+    with patch("sys.exit"):
         runner(tasks=[])
         mock_suite_instance.run.assert_called_once()
         mock_print.assert_called_with("🚀 Pipeline Successful")
@@ -282,7 +277,7 @@ def test_runner_keyboard_interrupt(mock_print_exc, mock_suite_class):
     mock_suite_instance.run.side_effect = KeyboardInterrupt()
     mock_suite_class.return_value = mock_suite_instance
 
-    with patch("sys.exit") as mock_exit:
+    with patch("sys.exit"):
         runner(tasks=[])
         mock_print_exc.assert_called_once()
         mock_suite_instance.print.assert_called_with(

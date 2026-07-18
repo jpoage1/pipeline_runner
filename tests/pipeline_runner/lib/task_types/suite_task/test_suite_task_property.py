@@ -3,15 +3,21 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
+from pipeline_runner.core.suite import PipelineSuite
 
 
 # Concrete implementation for testing abstract class
 class ConcreteTask(SuiteTask):
-    def _run(self):
+    def _run(self) -> str:
         return "success"
 
 
-class MockOwner:
+class MockOwner(PipelineSuite):
+    """A real PipelineSuite subclass (matches SuiteTask.__init__'s
+    owner: Optional[PipelineSuite] contract) that skips the real
+    constructor's argparse/CLI setup entirely - these tests only need
+    .args/.paths present, not a fully wired-up suite."""
+
     def __init__(self):
         self.args = {"dry_run": False}
         self.paths = {"root": Path("/tmp")}

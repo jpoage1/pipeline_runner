@@ -1,10 +1,10 @@
-import pytest
 from unittest.mock import MagicMock
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
+from pipeline_runner.lib.types import ShellOutput
 
 
 class RealShellTask(SuiteTask):
-    def _run(self):
+    def _run(self) -> ShellOutput:
         # Testing real 'echo' to verify string/list piping
         return self.sh("echo 'unit test'", check=True)
 

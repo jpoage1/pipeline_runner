@@ -3,29 +3,41 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from typing import TYPE_CHECKING, Optional, List, Any
+from typing import Optional, List, Any, Protocol, runtime_checkable
 
 from pipeline_runner.lib.types import LogRecord
 from pipeline_runner.lib.printer_helpers import serialize_records, filter_records
 
-if TYPE_CHECKING:
-    from pipeline_runner.lib.task_types.suite_task import SuiteTask
-
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+
+@runtime_checkable
+class HasId(Protocol):
+    """Printer's real, structural dependency on `instance` - it only ever
+    reads `.id` (and, for SuiteSubTask specifically, `.parent`, checked via
+    isinstance narrowing in msg_prefix). Any real SuiteTask already
+    satisfies this structurally; typing against SuiteTask nominally was
+    over-constraining, since Printer never actually needs a SuiteTask -
+    only something with an id."""
+
+    @property
+    def id(self) -> Any: ...
 
 
 class Printer:
     _history: List[LogRecord] = []
     _queue: List[LogRecord] = []
     _use_queue: bool = False
-    _parent: Optional["SuiteTask"] = None
-    _instance = None
+    # parent is never read beyond type(parent) below - genuinely untyped
+    # dependency, not a hedge.
+    _parent: object = None
+    _instance: Optional["HasId"] = None
 
     def __init__(
         self,
-        parent,
-        instance,
+        parent: object,
+        instance: Optional["HasId"],
     ):
         self._parent = parent
         self._instance = instance
@@ -34,13 +46,16 @@ class Printer:
         self._logger = logging.getLogger(f"pipeline.{type(instance).__name__}")
 
     def _create_record(self, level: int, *args, **kwargs) -> LogRecord:
-        """Internal helper to convert args/kwargs into a structured record."""
+        """Internal helper to convert args/kwargs into a structured record.
+        instance_id is None when this Printer has no instance bound - same
+        "unbound" case the id property already treats as valid, not an
+        error (see test_printer_id_property_no_instance)."""
         msg_str = " ".join(map(str, args))
         return LogRecord(
             timestamp=datetime.now(),
             level=level,
             message=msg_str,
-            instance_id=self.instance.id,
+            instance_id=self.instance.id if self.instance is not None else None,
             args=args,
             kwargs=kwargs,
         )
@@ -139,9 +154,16 @@ class Printer:
 
     @property
     def msg_prefix(self):
-        # Format: [ID] for main tasks, [ID.Sub] for subtasks
+        # Format: [ID] for main tasks, [ID.Sub] for subtasks, [unbound] for
+        # a Printer with no instance (same "unbound" case the id property
+        # already treats as valid, not an error).
         from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
 
-        if isinstance(self._instance, SuiteSubTask):
-            return f"\n[{self.instance.parent.id}.{self.instance.id}] "
-        return f"\n[{self.instance.id}] "
+        instance = self._instance
+        if instance is None:
+            return "\n[unbound] "
+        if isinstance(instance, SuiteSubTask):
+            parent = instance.parent
+            parent_id = parent.id if parent is not None else "unbound"
+            return f"\n[{parent_id}.{instance.id}] "
+        return f"\n[{instance.id}] "

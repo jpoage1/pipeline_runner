@@ -1,8 +1,17 @@
 import pytest
-import sys
-import traceback
 from unittest.mock import MagicMock, patch
 from pipeline_runner.core.pipeline_runner import runner
+from pipeline_runner.lib.task_types.suite_task import SuiteTask
+
+
+class MockTask(SuiteTask):
+    """A real SuiteTask subclass (matches runner()'s
+    list[type[SuiteTask]] contract) - PipelineSuite itself is mocked out
+    in every test in this file, so this is never actually instantiated,
+    only passed through by reference."""
+
+    def _run(self) -> bool:
+        return True
 
 
 @pytest.fixture
@@ -64,7 +73,7 @@ def test_runner_general_exception(mock_pipeline_suite):
 
 def test_runner_initializes_with_tasks(mock_pipeline_suite):
     """Verify that the provided task list is passed to PipelineSuite."""
-    tasks = [MagicMock(), MagicMock()]
+    tasks = [MockTask, MockTask]
 
     with patch(
         "pipeline_runner.core.pipeline_runner.PipelineSuite"

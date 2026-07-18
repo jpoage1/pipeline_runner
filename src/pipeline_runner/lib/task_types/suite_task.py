@@ -4,18 +4,13 @@ import sys
 import subprocess
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import List, TYPE_CHECKING, Any, Union, Optional
+from typing import List, TYPE_CHECKING, Union, Optional
 from shlex import split as shlex_split
 
 from pipeline_runner.lib.printer import Printer
 from pipeline_runner.lib.exceptions import TaskError
 from pipeline_runner.lib.types import typename, ShellOutput, Stage
 from pipeline_runner.lib.task_types.task import Task
-from pipeline_runner.lib.task_types.suite_task_helpers import (
-    prepare_command,
-    resolve_cwd,
-    should_skip,
-)
 
 
 if TYPE_CHECKING:
@@ -23,10 +18,17 @@ if TYPE_CHECKING:
 
 
 class SuiteTask(ABC):
-    _owner: "PipelineSuite"
-    _parent: "SuiteTask"
+    # Optional, not "PipelineSuite"/"SuiteTask" outright: __init__ accepts
+    # owner=None (guarded by the _initialized check, not unconditionally
+    # rejected) and assigns it straight through - the previous non-Optional
+    # annotations described the common case, not what's actually possible.
+    _owner: Optional["PipelineSuite"]
+    _parent: Optional["SuiteTask"]
     _global_counter: int = 0
-    _id: int
+    # int for a regular SuiteTask; SuiteSubTask uses a (global, sub) tuple
+    # to distinguish sub-tasks within the same parent - real, deliberate
+    # usage on both sides, not one "correct" case and one bug.
+    _id: int | tuple[int, int]
     _cwd: Path | None
     message: str
     name: str
@@ -42,7 +44,7 @@ class SuiteTask(ABC):
 
     def __init__(
         self,
-        parent,
+        parent: Optional["SuiteTask"],
         owner: Optional["PipelineSuite"],
         cwd: Path | str | None = None,
         attach_printer: bool = True,
@@ -73,7 +75,7 @@ class SuiteTask(ABC):
 
         self._owner = owner
         self._parent = parent
-        self.args = self._owner.args
+        self.args = self._require_owner().args
 
         from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
 
@@ -98,13 +100,21 @@ class SuiteTask(ABC):
 
         return False
 
+    def _require_owner(self) -> "PipelineSuite":
+        """Narrows self._owner to non-None, raising clearly instead of
+        letting a bare AttributeError surface later on a None access."""
+        if self._owner is None:
+            raise ValueError(f"{typename(self)} has no owner set")
+        return self._owner
+
     def get_arg(self, arg):
-        return self._owner.args.get(arg)
+        return self._require_owner().args.get(arg)
 
     def get_path(self, component: str, path: Path | str | None = None) -> Path:
+        base = self._require_owner().paths[component]
         if path is not None:
-            return self._owner.paths.get(component) / Path(path)
-        return self._owner.paths.get(component)
+            return base / Path(path)
+        return base
 
     def do_dry_run(self) -> bool:
         do_dry_run = self.args.get("dry_run", False)
@@ -134,7 +144,13 @@ class SuiteTask(ABC):
         self.printer.msg(*args, **kwargs)
 
     @abstractmethod
-    def _run(self) -> bool:
+    def _run(self) -> bool | str | None | ShellOutput:
+        """Task result: True/False (or a str/None a subclass treats as a
+        completion signal) for a plain pass/fail check, or a ShellOutput
+        for a task whose whole point is exposing what a command produced
+        (e.g. an integration test asserting on stdout/returncode). This
+        Union is the real, observed set of return values across the
+        codebase's own tasks and tests - not a placeholder for "anything"."""
         pass
 
     def dry_run(self) -> bool:
@@ -154,7 +170,7 @@ class SuiteTask(ABC):
 
         self.do_dry_run = func
 
-    def run(self) -> bool:
+    def run(self) -> bool | str | None | ShellOutput:
         # self.run_deps()
         dry_run = self.dry_run()
         if dry_run:
@@ -198,7 +214,16 @@ class SuiteTask(ABC):
         self.msg(f"  [EXEC] {cmd}")
 
         try:
-            result = subprocess.run(cmd, shell=shell, check=check, cwd=working_dir)
+            # capture_output=True (not text=True): ShellOutput.from_subprocess
+            # already handles bytes with tolerant decoding (see
+            # test_shell_output_handles_malformed_encoding) - forcing text
+            # mode here would make subprocess.run itself raise on invalid
+            # UTF-8 instead of going through that tested path. Without
+            # capture_output, stdout/stderr were never actually collected -
+            # every self.sh() caller silently got empty output.
+            result = subprocess.run(
+                cmd, shell=shell, check=check, cwd=working_dir, capture_output=True
+            )
             return ShellOutput.from_subprocess(result)
         except subprocess.CalledProcessError as e:
             if handle_exception:
@@ -304,11 +329,11 @@ class SuiteTask(ABC):
     # Properties
 
     @property
-    def owner(self) -> Any:
+    def owner(self) -> Optional["PipelineSuite"]:
         return self._owner
 
     @property
-    def parent(self) -> "SuiteTask":
+    def parent(self) -> Optional["SuiteTask"]:
         return self._parent
 
     @property
@@ -319,7 +344,7 @@ class SuiteTask(ABC):
             return os.getcwd()
 
     @property
-    def id(self) -> int:
+    def id(self) -> int | tuple[int, int]:
         return self._id
 
     @property
@@ -332,7 +357,7 @@ class SuiteTask(ABC):
 
     # Legacy getters
 
-    def get_id(self) -> int:
+    def get_id(self) -> int | tuple[int, int]:
         return self.id
 
     def get_stage(self) -> Stage:

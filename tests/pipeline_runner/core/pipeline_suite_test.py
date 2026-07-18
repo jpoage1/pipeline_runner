@@ -1,16 +1,19 @@
 import pytest
 import argparse
-from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 from pipeline_runner.core.suite import PipelineSuite, load_parser
+from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
 
-class MockTask:
-    __name__ = "MockTask"
+class MockTask(SuiteTask):
+    """A real SuiteTask subclass (matches PipelineSuite.all_tasks'
+    list[type[SuiteTask]] contract) rather than a bare duck-typed class -
+    never actually instantiated in these tests (Task.__init__/Task.run are
+    mocked out), only passed around as a class reference, so no __init__
+    override or behavior beyond the required abstract _run() is needed."""
 
-    def __init__(self, parent, owner):
-        self.parent = parent
-        self.owner = owner
+    def _run(self) -> bool:
+        return True
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
@@ -22,4 +21,4 @@ def test_suite_sub_task_init_and_msg():
 
     sub_task.msg("test msg")
     parent_task.msg.assert_called_once_with("test msg")
-    assert SuiteSubTask.get_count()[1] == 1
+    assert SuiteSubTask.get_sub_counters()[1] == 1

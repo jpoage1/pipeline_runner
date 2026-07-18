@@ -1,9 +1,7 @@
 import pytest
 import json
 import logging
-import builtins
-from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch
 from pipeline_runner.lib.printer import Printer
 from pipeline_runner.lib.types import LogRecord
 

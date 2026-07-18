@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pipeline_runner.tasks.bootstrap import EnsurePaths
+from pipeline_runner.core.bootstrap import EnsurePaths
 
 
 @pytest.fixture
@@ -36,10 +36,13 @@ def test_ensure_paths_creates_directories(task_context, tmp_path):
     assert path_b.is_dir()
 
 
-@patch.object(Path, "mkdir")
-def test_ensure_paths_mkdir_arguments(mock_mkdir, task_context):
+def test_ensure_paths_mkdir_arguments(task_context):
     """Verify mkdir is called with parents=True and exist_ok=True."""
     parent, owner = task_context
+    # mock_path is a MagicMock, not a real Path - @patch.object(Path,
+    # "mkdir") would never intercept a call made through it (that only
+    # patches the real class), so assert on the mock's own auto-generated
+    # .mkdir attribute directly instead.
     mock_path = MagicMock(spec=Path)
 
     class ConcreteEnsurePaths(EnsurePaths):
@@ -48,4 +51,4 @@ def test_ensure_paths_mkdir_arguments(mock_mkdir, task_context):
     task = ConcreteEnsurePaths(parent, owner)
     task._run()
 
-    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    mock_path.mkdir.assert_called_once_with(parents=True, exist_ok=True)
