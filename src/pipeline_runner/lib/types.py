@@ -28,6 +28,10 @@ class TaskStatus(Enum):
     COMPLETED = "completed"  # Run and result stored
 
 
+class TaskResult(Enum):
+    SKIPPED = "skipped"
+
+
 @dataclass(frozen=True)
 class LogRecord:
     timestamp: datetime

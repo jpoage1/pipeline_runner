@@ -9,7 +9,7 @@ from shlex import split as shlex_split
 
 from pipeline_runner.lib.printer import Printer
 from pipeline_runner.lib.exceptions import TaskError
-from pipeline_runner.lib.types import typename, ShellOutput, Stage
+from pipeline_runner.lib.types import typename, ShellOutput, Stage, TaskResult
 from pipeline_runner.lib.task_types.task import Task
 
 
@@ -89,9 +89,13 @@ class SuiteTask(ABC):
         for dep in self._deps:
             Task.add(dep)
 
-    def run_deps(self) -> None:
+    def run_deps(self) -> list[str]:
+        failed = []
         for dep in self._deps:
-            Task.run(dep)
+            result = Task.run(dep)
+            if result is False or result is TaskResult.SKIPPED:
+                failed.append(Task.get_task_name(dep))
+        return failed
 
     @property
     def skip_task(self) -> bool:
@@ -144,7 +148,7 @@ class SuiteTask(ABC):
         self.printer.msg(*args, **kwargs)
 
     @abstractmethod
-    def _run(self) -> bool | str | None | ShellOutput:
+    def _run(self) -> bool | str | None | ShellOutput | TaskResult:
         """Task result: True/False (or a str/None a subclass treats as a
         completion signal) for a plain pass/fail check, or a ShellOutput
         for a task whose whole point is exposing what a command produced
@@ -170,11 +174,17 @@ class SuiteTask(ABC):
 
         self.do_dry_run = func
 
-    def run(self) -> bool | str | None | ShellOutput:
+    def run(self) -> bool | str | None | ShellOutput | TaskResult:
         # self.run_deps()
         dry_run = self.dry_run()
         if dry_run:
             return dry_run
+        failed_deps = self.run_deps()
+        if failed_deps:
+            self.print(
+                "Skipping because dependencies did not pass: " + ", ".join(failed_deps)
+            )
+            return TaskResult.SKIPPED
         return self._run()
 
     def fail(self, *args, critical: bool = False, **kwargs) -> None:

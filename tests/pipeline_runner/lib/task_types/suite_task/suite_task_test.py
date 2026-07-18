@@ -5,7 +5,7 @@ import io
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
-from pipeline_runner.lib.types import ShellException
+from pipeline_runner.lib.types import ShellException, TaskResult
 from pipeline_runner.core.pipeline_runner import runner
 
 
@@ -239,8 +239,27 @@ def test_suitetask_get_count_explicit():
 def test_run_deps(mock_run, task_context):
     """Cover dependency execution iteration."""
     task_context._deps = ["dep1", "dep2"]
-    task_context.run_deps()
+    mock_run.side_effect = [True, False]
+    failed = task_context.run_deps()
     assert mock_run.call_count == 2
+    assert failed == ["dep2"]
+
+
+@pytest.mark.parametrize("dep_result", [False, TaskResult.SKIPPED])
+def test_run_skips_when_dependency_does_not_pass(dep_result, task_context):
+    """Dependent task bodies do not run after a failed prerequisite."""
+    task_context._deps = ["dep1"]
+    with patch(
+        "pipeline_runner.lib.task_types.task.Task.run",
+        return_value=dep_result,
+    ), patch.object(task_context, "_run") as mock_run_logic:
+        result = task_context.run()
+
+    assert result is TaskResult.SKIPPED
+    mock_run_logic.assert_not_called()
+    task_context.printer.print.assert_any_call(
+        "Skipping because dependencies did not pass: dep1"
+    )
 
 
 def test_get_path_and_cwd(task_context):

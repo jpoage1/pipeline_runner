@@ -8,6 +8,7 @@ from pipeline_runner.lib.declarative import (
 )
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.task_types.task import Task
+from pipeline_runner.lib.types import TaskResult
 from pipeline_runner.core.suite import PipelineSuite
 
 
@@ -114,14 +115,14 @@ def test_build_task_classes_preserves_order():
     assert [c.__name__ for c in classes] == ["First", "Second", "Third"]
 
 
-## Integration: string deps + run order, against the real Task/PipelineSuite
-## machinery - this is the load-bearing assumption the whole loader rests
-## on (see declarative.py's module docstring), so it's proven end to end
-## rather than mocked.
+## Integration: string deps + dependency execution, against the real
+## Task/PipelineSuite machinery. This is the load-bearing assumption the
+## whole loader rests on (see declarative.py's module docstring), so it's
+## proven end to end rather than mocked.
 
 
 @patch("argparse.ArgumentParser.parse_args")
-def test_string_deps_resolve_and_run_order_follows_list_not_deps(mock_parse):
+def test_string_deps_resolve_and_run_before_dependents(mock_parse):
     mock_parse.return_value = argparse.Namespace(
         task=None,
         full_pipeline=True,
@@ -134,9 +135,8 @@ def test_string_deps_resolve_and_run_order_follows_list_not_deps(mock_parse):
 
     specs = [
         # Listed BEFORE its dependency on purpose: proves run order comes
-        # from list position, not from `deps`, matching suite.py's
-        # PipelineSuite._run() (all_tasks in list order) and Task.add()
-        # only *instantiating* deps, never running them eagerly.
+        # from the dependency graph where a task declares deps, not only
+        # from list position.
         {"id": "Dependent", "type": "recording", "deps": ["Dependency"]},
         {"id": "Dependency", "type": "recording"},
     ]
@@ -147,8 +147,7 @@ def test_string_deps_resolve_and_run_order_follows_list_not_deps(mock_parse):
     suite.printer = MagicMock()
     suite._run()
 
-    # Run order matches list order, not dependency order.
-    assert RecordingTask.run_log == ["Dependent", "Dependency"]
+    assert RecordingTask.run_log == ["Dependency", "Dependent"]
 
     # The string dep resolved correctly (not a raised "does not exist").
     assert Task.exists("Dependency")
@@ -159,6 +158,33 @@ def test_string_deps_resolve_and_run_order_follows_list_not_deps(mock_parse):
     # (HealthPipelineSuite/run_health_suite) reads from.
     assert Task._completed["Dependent"] is True
     assert Task._completed["Dependency"] is True
+
+
+@patch("argparse.ArgumentParser.parse_args")
+def test_failing_string_dep_skips_dependent_task(mock_parse):
+    mock_parse.return_value = argparse.Namespace(
+        task=None,
+        full_pipeline=True,
+        root=None,
+        stage=None,
+        dry_run=False,
+        tasks=None,
+        skip=None,
+    )
+
+    specs = [
+        {"id": "Dependent", "type": "recording", "deps": ["Dependency"]},
+        {"id": "Dependency", "type": "recording", "should_pass": False},
+    ]
+    classes = build_task_classes(specs, TYPE_REGISTRY)
+
+    suite = PipelineSuite(all_tasks=classes)
+    suite.printer = MagicMock()
+    suite._run()
+
+    assert RecordingTask.run_log == ["Dependency"]
+    assert Task._completed["Dependency"] is False
+    assert Task._completed["Dependent"] is TaskResult.SKIPPED
 
 
 @patch("argparse.ArgumentParser.parse_args")
