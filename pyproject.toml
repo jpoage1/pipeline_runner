@@ -27,21 +27,30 @@ target-version = ["py313"]
 src = ["src"]
 target-version = "py313"
 
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "B",    # flake8-bugbear
-    "UP",   # pyupgrade
-    "A",    # flake8-builtins
-    "C4",   # flake8-comprehensions
-    "SIM",  # flake8-simplify
-    "RUF",  # Ruff-specific rules
-    "ANN",  # flake8-annotations
-    "FA",   # flake8-future-annotations
+   "ALL",
+    # "E",    # pycodestyle errors
+    # "W",    # pycodestyle warnings
+    # "F",    # pyflakes
+    # "I",    # isort
+    # "B",    # flake8-bugbear
+    # "UP",   # pyupgrade
+    # "A",    # flake8-builtins
+    # "C4",   # flake8-comprehensions
+    # "SIM",  # flake8-simplify
+    # "RUF",  # Ruff-specific rules
+    # "ANN",  # flake8-annotations
+    # "FA",   # flake8-future-annotations
 ]
+
+[tool.ruff.lint.pylint]
+max-args = 3          # Hard limit on function parameter inflation
+max-statements = 30   # Enforces tiny, modular logical blocks
 
 [tool.ruff.lint.flake8-annotations]
 # Explicitly disallow Any even inside *args and **kwargs signatures
