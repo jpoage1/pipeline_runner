@@ -1,20 +1,29 @@
-import pytest
+"""Tests for lib.task_types.task.task_test."""
+
+from typing import Any
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from pipeline_runner.lib.task_types.task import Task
 from pipeline_runner.lib.types import TaskStatus
 
 
 class MockTaskClass:
-    def __init__(self, parent, owner=None):
+    """Mock class."""
+
+    def __init__(self, parent: Any, owner: Any = None) -> None:
+        """Initialize the mock."""
         self.parent = parent
         self.owner = owner
 
-    def run(self):
+    def run(self) -> str:
+        """Mock method."""
         return "task_success"
 
 
 @pytest.fixture(autouse=True)
-def reset_task_state():
+def reset_task_state() -> None:
     """Resets the Task class-level state before every test."""
     Task._initialized = False
     Task._registry = {}
@@ -26,7 +35,7 @@ def reset_task_state():
 ## Registry and Initialization Tests
 
 
-def test_task_init_registration():
+def test_task_init_registration() -> None:
     """Verify Task.__init__ populates the registry and sets the owner."""
     owner = "TestOwner"
     tasks = [MockTaskClass]
@@ -38,7 +47,7 @@ def test_task_init_registration():
     assert Task._registry["MockTaskClass"] == MockTaskClass
 
 
-def test_task_init_singleton_lock():
+def test_task_init_singleton_lock() -> None:
     """Verify Task.__init__ does not overwrite state if already initialized."""
     Task._initialized = True
     Task._owner = "OriginalOwner"
@@ -50,13 +59,13 @@ def test_task_init_singleton_lock():
 ## Dependency Management (add)
 
 
-def test_add_missing_task_raises_error():
+def test_add_missing_task_raises_error() -> None:
     """Verify ValueError when trying to add a task not in the registry."""
     with pytest.raises(ValueError, match="Dependency MissingTask does not exist"):
         Task.add("MissingTask")
 
 
-def test_add_new_task_initialization():
+def test_add_new_task_initialization() -> None:
     """Verify add() instantiates a task and stores it in _loaded."""
     Task._owner = "Owner"
     Task._registry["MockTaskClass"] = MockTaskClass
@@ -69,7 +78,8 @@ def test_add_new_task_initialization():
     assert instance.owner == "Owner"
 
 
-def test_add_existing_task_returns_cached_instance():
+def test_add_existing_task_returns_cached_instance() -> None:
+    """Verify add_existing_task_returns_cached_instance."""
     mock_instance = MagicMock()
     # Populate the registry so get_task_status doesn't return MISSING
     Task._registry["MockTaskClass"] = MagicMock()
@@ -86,7 +96,7 @@ def test_add_existing_task_returns_cached_instance():
 ## Execution Orchestration (run)
 
 
-def test_run_executes_and_stores_result():
+def test_run_executes_and_stores_result() -> None:
     """Verify run() executes a task and caches the result in _completed."""
     Task._owner = "Owner"
     Task._registry["MockTaskClass"] = MockTaskClass
@@ -97,7 +107,7 @@ def test_run_executes_and_stores_result():
     assert Task._completed["MockTaskClass"] == "task_success"
 
 
-def test_run_returns_cached_result():
+def test_run_returns_cached_result() -> None:
     """Verify run() fetches result from _completed without re-running."""
     Task._completed["MockTaskClass"] = "cached_success"
 
@@ -111,7 +121,7 @@ def test_run_returns_cached_result():
 ## Helper Method Tests
 
 
-def test_exists_and_completed_checks():
+def test_exists_and_completed_checks() -> None:
     """Verify boolean helper methods correctly query state."""
     Task._registry["ExistTask"] = MockTaskClass
     Task._completed["DoneTask"] = True
@@ -122,34 +132,28 @@ def test_exists_and_completed_checks():
     assert Task.completed("ExistTask") is False
 
 
-def test_get_task_name_resolution():
+def test_get_task_name_resolution() -> None:
     """Verify resolution of names from both strings and classes."""
     assert Task.get_task_name(MockTaskClass) == "MockTaskClass"
     assert Task.get_task_name("StaticName") == "StaticName"
 
 
-def test_task_exists():
+def test_task_exists() -> None:
     """Verify registry presence check."""
-    from pipeline_runner.lib.task_types.task import Task
-
     Task._registry["ExistingTask"] = MagicMock()
 
     assert Task.exists("ExistingTask") is True
     assert Task.exists("NonExistingTask") is False
 
 
-def test_task_get_owner():
+def test_task_get_owner() -> None:
     """Verify owner reference retrieval."""
-    from pipeline_runner.lib.task_types.task import Task
-
     Task._owner = "TestOwner"
 
     assert Task.get_owner() == "TestOwner"
 
 
-def test_task_initialized_method():
+def test_task_initialized_method() -> None:
     """Verify initialized evaluation evaluates completed dict."""
-    from pipeline_runner.lib.task_types.task import Task
-
     Task._completed["InitTask"] = True
     assert Task.initialized("InitTask") is True

@@ -1,31 +1,36 @@
-import os
-from shlex import split as shlex_split
+"""Pure helper functions for shell command execution within tasks."""
+
 from pathlib import Path
+from shlex import split as shlex_split
+from typing import Any
 
 
-def prepare_command(cmd: str, shell: bool, use_shlex: bool):
-    """Purely prepares the command and shell flag."""
+def prepare_command(
+    cmd: str,
+    shell: Any,
+    use_shlex: Any,
+) -> tuple[list[str] | str, bool]:
+    """Prepare the command and shell flag for execution."""
     if use_shlex:
         return shlex_split(cmd), False
     return cmd, shell
 
 
 def resolve_cwd(provided_cwd: Path | None) -> str:
-    """Purely resolves the CWD to a string."""
-    return str(provided_cwd or os.getcwd())
+    """Resolve the working directory to a string."""
+    return str(provided_cwd or Path.cwd())
 
 
 def should_skip(
-    disabled: bool | int | str | None,
-    dry_run_active: bool | int | str | None,
-    force_run: bool | int | str | None,
+    disabled: Any,
+    dry_run_active: Any,
+    force_run: Any,
 ) -> bool:
-    """Determines if the command execution should be bypassed. Genuinely
-    duck-typed on truthiness (if disabled: / dry_run_active and ...), not
-    strict bool comparisons - the Union reflects real, tested callers
-    (see test_should_skip_boundary_conditions), not a hedge."""
+    """Determine if the command execution should be bypassed.
+
+    Duck-typed on truthiness - the Any types reflect real, tested callers
+    (see test_should_skip_boundary_conditions), not a hedge.
+    """
     if disabled:
         return True
-    if dry_run_active and force_run is not False:
-        return True
-    return False
+    return bool(dry_run_active and force_run is not False)

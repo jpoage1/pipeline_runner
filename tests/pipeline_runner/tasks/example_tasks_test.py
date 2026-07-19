@@ -1,13 +1,19 @@
+"""Tests for tasks.example_tasks_test."""
+
+from typing import Any
 from unittest.mock import MagicMock, patch
+
 from pipeline_runner.tasks.example_tasks import ExampleTask, ExampleTaskRunner
 
 
 class ConcreteExampleRunner(ExampleTaskRunner):
-    def _run(self):
+    """Mock class."""
+
+    def _run(self) -> Any:
         return super()._run()
 
 
-def test_example_task_execution():
+def test_example_task_execution() -> None:
     """Verify ExampleTask outputs the correct string."""
     owner = MagicMock()
     task = ExampleTask(parent=MagicMock(), owner=owner)
@@ -18,7 +24,7 @@ def test_example_task_execution():
 
 
 @patch("argparse.ArgumentParser.parse_args")
-def test_example_task_runner_initialization(mock_parse):
+def test_example_task_runner_initialization(mock_parse: MagicMock) -> None:
     """Verify ExampleTaskRunner initializes and _run acts as a pass-through."""
     mock_parse.return_value = MagicMock(
         task=None,

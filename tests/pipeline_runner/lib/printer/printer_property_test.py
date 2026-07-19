@@ -1,21 +1,28 @@
-import pytest
+"""Tests for lib.printer.printer_property_test."""
+
 import logging
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from pipeline_runner.lib.printer import Printer
-from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
 
 
 class MockInstance:
-    def __init__(self, id):
-        self.id = id
+    """Mock class."""
+
+    def __init__(self, instance_id: str) -> None:
+        """Initialize the mock."""
+        self.id = instance_id
+        self.parent = None
 
 
 class MockParent:
-    pass
+    """Mock class."""
 
 
 @pytest.fixture(autouse=True)
-def reset_printer():
+def reset_printer() -> None:
     """Resets the global state of the Printer class before every test."""
     Printer._history = []
     Printer._queue = []
@@ -25,9 +32,9 @@ def reset_printer():
 ## Initialization Tests
 
 
-def test_printer_init():
+def test_printer_init() -> None:
     """Verify logger and ID assignment during initialization."""
-    instance = MockInstance(id="1.1")
+    instance = MockInstance(instance_id="1.1")
     parent = MockParent()
     printer = Printer(parent, instance)
 
@@ -43,9 +50,9 @@ def test_printer_init():
 ## Queuing and State Management
 
 
-def test_enable_disable_queue():
+def test_enable_disable_queue() -> None:
     """Verify queue toggle and state properties."""
-    instance = MockInstance(id="2")
+    instance = MockInstance(instance_id="2")
     printer = Printer(MockParent(), instance)
 
     printer.enable_queue()
@@ -55,9 +62,9 @@ def test_enable_disable_queue():
     assert Printer._use_queue is False
 
 
-def test_print_without_queue_calls_logger_immediately():
+def test_print_without_queue_calls_logger_immediately() -> None:
     """Verify logger is called directly when queue is disabled."""
-    instance = MockInstance(id="3")
+    instance = MockInstance(instance_id="3")
     printer = Printer(MockParent(), instance)
 
     with patch.object(printer.logger, "log") as mock_log:
@@ -68,9 +75,9 @@ def test_print_without_queue_calls_logger_immediately():
         assert len(Printer._queue) == 0
 
 
-def test_print_with_queue_stores_record():
+def test_print_with_queue_stores_record() -> None:
     """Verify records are stored in the queue and not logged immediately."""
-    instance = MockInstance(id="4")
+    instance = MockInstance(instance_id="4")
     printer = Printer(MockParent(), instance)
     printer.enable_queue()
 
@@ -82,9 +89,9 @@ def test_print_with_queue_stores_record():
         assert Printer._queue[0].message == "Queued message"
 
 
-def test_dump_flushes_queue_to_logger():
+def test_dump_flushes_queue_to_logger() -> None:
     """Verify dump/flush outputs all queued records to the logger and clears queue."""
-    instance = MockInstance(id="5")
+    instance = MockInstance(instance_id="5")
     printer = Printer(MockParent(), instance)
     printer.enable_queue()
     printer.print("Message 1")
@@ -102,9 +109,9 @@ def test_dump_flushes_queue_to_logger():
 ## History Management
 
 
-def test_clear_history():
+def test_clear_history() -> None:
     """Verify history is wiped correctly."""
-    printer = Printer(MockParent(), MockInstance(id="6"))
+    printer = Printer(MockParent(), MockInstance(instance_id="6"))
     printer.print("Test")
     assert len(Printer._history) == 1
 
@@ -115,39 +122,30 @@ def test_clear_history():
 ## Prefix Logic
 
 
-def test_msg_prefix_standard_task():
+def test_msg_prefix_standard_task() -> None:
     """Verify prefix formatting for standard tasks."""
-    instance = MockInstance(id="7")
+    instance = MockInstance(instance_id="7")
     printer = Printer(MockParent(), instance)
 
     assert printer.msg_prefix == "\n[7] "
 
 
-def test_msg_prefix_subtask():
+def test_msg_prefix_subtask() -> None:
     """Verify prefix formatting for subtasks [ParentID.SubID]."""
-    from unittest.mock import MagicMock
-    from pipeline_runner.lib.printer import Printer
 
     class MockParent:
-        pass
+        id = "8"
 
-    class MockInstance:
-        def __init__(self, id):
-            self.id = id
+    sub_instance = MagicMock()
+    sub_instance.id = ("P1", "S1")
+    sub_instance.parent = MockParent()
 
-    parent_mock = MockInstance(id="8")
-    sub_instance = MagicMock(spec=SuiteSubTask)
-    sub_instance.id = "sub1"
-    sub_instance.parent = parent_mock
-
-    printer = Printer(MockParent(), sub_instance)
-    assert printer.msg_prefix == "\n[8.sub1] "
+    printer = Printer(MagicMock(), sub_instance)
+    assert printer.msg_prefix == "\n[8.S1] "
 
 
-def test_printer_properties_coverage():
+def test_printer_properties_coverage() -> None:
     """Access properties to fulfill coverage execution branches."""
-    from pipeline_runner.lib.printer import Printer
-
     printer = Printer(MagicMock(), MagicMock())
     _ = printer.queue
     _ = printer.logger

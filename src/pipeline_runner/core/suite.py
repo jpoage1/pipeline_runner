@@ -1,15 +1,19 @@
+"""Pipeline suite orchestration with argument parsing and task management."""
+
 import argparse
+import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, Never, Optional
 
 from pipeline_runner.lib.exceptions import SuiteError
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.task_types.task import Task
-from pipeline_runner.lib.types import typename, ShellOutput
-
-from typing import Optional, Sequence
+from pipeline_runner.lib.types import ShellOutput, typename
 
 
-def load_parser():
+def load_parser() -> argparse.ArgumentParser:
+    """Create and return the CLI argument parser for the pipeline suite."""
     parser = argparse.ArgumentParser(description="Pipeline Suite")
 
     parser.add_argument("--task", type=str)
@@ -31,14 +35,20 @@ def load_parser():
 
 
 class PipelineSuite(SuiteTask):
-    """
-    Orchestrates the Hexascript logic verification pipeline.
+    """Orchestrates the Hexascript logic verification pipeline.
+
     Replaces tdd_loop.sh with zero subprocess overhead for Python logic.
     """
 
     name = "Pipeline Runner"
     root_dir: Path | None
     _in_nix_shell: bool
+
+    @property
+    def in_nix_shell(self) -> bool:
+        """Return whether the pipeline is running inside a Nix shell."""
+        return self._in_nix_shell
+
     # Always self in practice (set in __init__) - Optional only because a
     # mutable attribute override must match its base declaration exactly
     # (SuiteTask._owner: Optional["PipelineSuite"]), not narrow it.
@@ -55,19 +65,20 @@ class PipelineSuite(SuiteTask):
     # nothing here ever actually passes; fixed at the source rather than
     # suppressed at each call site, since this project is the source of
     # truth other projects (e.g. health_check) build on, not the reverse.
-    all_tasks: Optional[Sequence[type["SuiteTask"]]] = None
+    all_tasks: Sequence[type["SuiteTask"]] | None = None
 
     def __init__(
         self,
-        *args,
-        all_tasks: Optional[Sequence[type["SuiteTask"]]] = None,
+        *args: Any,
+        all_tasks: Sequence[type["SuiteTask"]] | None = None,
         root: str | None = None,
-        parser: Optional[argparse.ArgumentParser] = None,
-        **kwargs,
-    ):
+        parser: argparse.ArgumentParser | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the pipeline suite with tasks and parser."""
         self.disable_dry_run()
         self._in_nix_shell = False
-        self.args: dict = dict()
+        self.args: dict[str, Any] = {}
 
         self._owner = self
         self._parser(parser)
@@ -81,17 +92,16 @@ class PipelineSuite(SuiteTask):
         self.kwargs = kwargs
         self._all_tasks = all_tasks
 
-    def _parser(self, parser: Optional[argparse.ArgumentParser] = None):
+    def _parser(self, parser: argparse.ArgumentParser | None = None) -> None:
+
+        if self.args:
+            sys.stderr.write("Parser already initialized\n")
+            return
 
         parser = parser or load_parser()
         self._require_owner().args = vars(parser.parse_args())
 
-        def initialized(*args, **kwargs):
-            print("Parser already initialized")
-
-        self._parser = initialized
-
-    def fail(self, *args, **kwargs):
+    def fail(self, *args: Any, **kwargs: Any) -> Never:
         """Helper to raise the state-aware exception."""
         raise SuiteError(self, *args, **kwargs)
 

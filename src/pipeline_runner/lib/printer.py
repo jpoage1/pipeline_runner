@@ -1,36 +1,36 @@
+"""Logging and message formatting for pipeline tasks."""
+
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime
+from typing import Any, ClassVar, Optional, Protocol, runtime_checkable
 
-from typing import Optional, List, Any, Protocol, runtime_checkable
-
+from pipeline_runner.lib.printer_helpers import filter_records, serialize_records
 from pipeline_runner.lib.types import LogRecord
-from pipeline_runner.lib.printer_helpers import serialize_records, filter_records
-
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 @runtime_checkable
 class HasId(Protocol):
-    """Printer's real, structural dependency on `instance` - it only ever
-    reads `.id` (and, for SuiteSubTask specifically, `.parent`, checked via
-    isinstance narrowing in msg_prefix). Any real SuiteTask already
-    satisfies this structurally; typing against SuiteTask nominally was
-    over-constraining, since Printer never actually needs a SuiteTask -
-    only something with an id."""
+    """Structural protocol: anything with ``.id`` and optionally ``.parent``."""
 
     @property
-    def id(self) -> Any: ...
+    def id(self) -> Any:
+        """Return the instance's identifier."""
+
+    @property
+    def parent(self) -> Optional["HasId"]:
+        """Return the instance's parent, if any."""
 
 
 class Printer:
-    _history: List[LogRecord] = []
-    _queue: List[LogRecord] = []
+    """Manages structured logging with queue, history, and prefix support."""
+
+    _history: ClassVar[list[LogRecord]] = []
+    _queue: ClassVar[list[LogRecord]] = []
     _use_queue: bool = False
-    # parent is never read beyond type(parent) below - genuinely untyped
-    # dependency, not a hedge.
     _parent: object = None
     _instance: Optional["HasId"] = None
 
@@ -38,21 +38,18 @@ class Printer:
         self,
         parent: object,
         instance: Optional["HasId"],
-    ):
+    ) -> None:
+        """Initialize the printer with parent context and optional instance."""
         self._parent = parent
         self._instance = instance
         self._parent_id = type(parent)
-
         self._logger = logging.getLogger(f"pipeline.{type(instance).__name__}")
 
-    def _create_record(self, level: int, *args, **kwargs) -> LogRecord:
-        """Internal helper to convert args/kwargs into a structured record.
-        instance_id is None when this Printer has no instance bound - same
-        "unbound" case the id property already treats as valid, not an
-        error (see test_printer_id_property_no_instance)."""
+    def _create_record(self, level: int, *args: Any, **kwargs: Any) -> LogRecord:
+        """Convert args/kwargs into a structured record."""
         msg_str = " ".join(map(str, args))
         return LogRecord(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             level=level,
             message=msg_str,
             instance_id=self.instance.id if self.instance is not None else None,
@@ -60,13 +57,14 @@ class Printer:
             kwargs=kwargs,
         )
 
-    def dump(self):
-        """Flushes the current queue to the console and clears it."""
+    def dump(self) -> None:
+        """Flush the current queue to the console and clear it."""
         for record in Printer._queue:
             self.logger.log(record.level, record.message, **record.kwargs)
         Printer._queue = []
 
-    def print(self, *args, level: int = logging.INFO, **kwargs):
+    def print(self, *args: Any, level: int = logging.INFO, **kwargs: Any) -> None:
+        """Record a log entry in history and optionally send to logger."""
         record = self._create_record(level, *args, **kwargs)
         Printer._history.append(record)
 
@@ -75,95 +73,88 @@ class Printer:
         else:
             self.logger.log(level, record.message, **kwargs)
 
-    def flush(self):
+    def flush(self) -> None:
         """Alias for dump."""
         self.dump()
 
-    def clear_history(self):
-        """Wipes the global history cache."""
+    def clear_history(self) -> None:
+        """Wipe the global history cache."""
         Printer._history = []
 
     def cherry_pick(
-        self, level: Optional[int] = None, instance_id: Any = None
-    ) -> List[LogRecord]:
-        """Calls the pure filter function using the current history."""
+        self,
+        level: int | None = None,
+        instance_id: Any | None = None,
+    ) -> list[LogRecord]:
+        """Filter history by level and/or instance id."""
         return filter_records(Printer._history, level=level, instance_id=instance_id)
 
-    def replay_history(self, records: List[LogRecord]):
-        """Side-effect: Outputs provided records to the logger."""
+    def replay_history(self, records: list[LogRecord]) -> None:
+        """Output provided records to the logger."""
         for r in records:
             self.logger.log(r.level, r.message, **r.kwargs)
 
-    def save_stdout(self, _file_path: Path | str):
-        """Uses the pure serializer to prepare data, then handles the I/O side effect."""
+    def save_stdout(self, _file_path: Path | str) -> None:
+        """Serialize history to a JSON file."""
         file_path = Path(_file_path).resolve()
-
-        # 1. Transform data purely
         serializable_data = serialize_records(Printer._history)
-
-        # 2. Perform the side effect (writing to disk)
-        with open(file_path, "w") as f:
+        with Path(file_path).open("w") as f:
             json.dump(serializable_data, f, indent=4)
 
-    def msg(self, *args, level: int = logging.INFO, **kwargs):
-        """Standardized message logger with prefix."""
-        # 1. Get the prefix (e.g., "\n[1.2] ")
+    def msg(self, *args: Any, level: int = logging.INFO, **kwargs: Any) -> None:
+        """Log a message with a structured prefix."""
         prefix = self.msg_prefix
-
-        # 2. Extract the first message if it exists, otherwise use an empty string
-        # This prevents an IndexError if msg() is called without arguments
         first_msg = args[0] if args else ""
-
-        # 3. Combine the prefix and the first message into one string
         combined_header = f"{prefix}{first_msg}"
-
-        # 4. Capture the remaining messages (if any)
         remaining_args = args[1:]
-
-        # 5. Send the combined header + everything else to the print method
-        # We use *remaining_args to "unpack" the rest of the tuple
         self.print(combined_header, *remaining_args, level=level, **kwargs)
 
-    def enable_queue(self):
+    def enable_queue(self) -> None:
+        """Enable queue mode (buffers messages)."""
         Printer._use_queue = True
 
-    def disable_queue(self):
+    def disable_queue(self) -> None:
+        """Disable queue mode and flush."""
         Printer._use_queue = False
         self.dump()
 
     @property
-    def history(self):
+    def history(self) -> list[LogRecord]:
+        """Return the global history list."""
         return self._history
 
     @property
-    def queue(self):
+    def queue(self) -> list[LogRecord]:
+        """Return the global queue list."""
         return self._queue
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
+        """Return the logger instance."""
         return self._logger
 
     @property
-    def instance(self):
+    def instance(self) -> Optional["HasId"]:
+        """Return the bound instance, if any."""
         return self._instance
 
     @property
-    def id(self):
+    def id(self) -> Any | None:
+        """Return the bound instance's id, or None if unbound."""
         if self._instance is not None:
             return self._instance.id
+        return None
 
     @property
-    def msg_prefix(self):
-        # Format: [ID] for main tasks, [ID.Sub] for subtasks, [unbound] for
-        # a Printer with no instance (same "unbound" case the id property
-        # already treats as valid, not an error).
-        from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
-
+    def msg_prefix(self) -> str:
+        """Format prefix: [ID], [ID.Sub], or [unbound]."""
         instance = self._instance
         if instance is None:
             return "\n[unbound] "
-        if isinstance(instance, SuiteSubTask):
+        raw_id = instance.id
+        if type(raw_id) is tuple:
             parent = instance.parent
-            parent_id = parent.id if parent is not None else "unbound"
-            return f"\n[{parent_id}.{instance.id}] "
-        return f"\n[{instance.id}] "
+            parent_id: int | str = parent.id if parent is not None else "unbound"
+            sub_id = f"{raw_id[1]}"
+            return f"\n[{parent_id}.{sub_id}] "
+        return f"\n[{raw_id}] "

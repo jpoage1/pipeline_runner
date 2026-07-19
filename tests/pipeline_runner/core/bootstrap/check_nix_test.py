@@ -1,11 +1,17 @@
-import pytest
+"""Tests for core.bootstrap.check_nix_test."""
+
 import os
+from collections.abc import Iterator
+from typing import Any
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from pipeline_runner.core.bootstrap import CheckNix
 
 
 @pytest.fixture
-def task_context():
+def task_context() -> Iterator[tuple[MagicMock, MagicMock]]:
     """Provides a mocked owner and parent for task initialization."""
     owner = MagicMock()
     owner.args = {"dry_run": False}
@@ -19,7 +25,7 @@ def task_context():
 
 
 @patch("shutil.which")
-def test_check_nix_not_found(mock_which, task_context):
+def test_check_nix_not_found(mock_which: MagicMock, task_context: Any) -> None:
     """Verify CheckNix handles missing nix binary gracefully."""
     mock_which.return_value = None
     parent, owner = task_context
@@ -33,7 +39,7 @@ def test_check_nix_not_found(mock_which, task_context):
 
 
 @patch("shutil.which")
-def test_check_nix_in_shell(mock_which, task_context):
+def test_check_nix_in_shell(mock_which: MagicMock, task_context: Any) -> None:
     """Verify CheckNix detects the IN_NIX_SHELL environment variable."""
     mock_which.return_value = "/run/current-system/sw/bin/nix"
     parent, owner = task_context

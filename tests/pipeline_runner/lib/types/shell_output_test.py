@@ -1,9 +1,12 @@
+"""Tests for lib.types.shell_output_test."""
+
 import subprocess
 from unittest.mock import MagicMock
+
 from pipeline_runner.lib.types import ShellOutput
 
 
-def test_shell_output_ansi_stripping():
+def test_shell_output_ansi_stripping() -> None:
     """Verify that ANSI escape codes are removed from stdout/stderr."""
     mock_result = MagicMock(spec=subprocess.CompletedProcess)
     # Green "active", Red "error"
@@ -18,7 +21,7 @@ def test_shell_output_ansi_stripping():
     assert output.returncode == 0
 
 
-def test_shell_output_handles_malformed_encoding():
+def test_shell_output_handles_malformed_encoding() -> None:
     """Verify handling of non-utf8 bytes in subprocess output."""
     mock_result = MagicMock(spec=subprocess.CompletedProcess)
     # Binary data mixed with text
@@ -32,7 +35,7 @@ def test_shell_output_handles_malformed_encoding():
     assert output.returncode == 1
 
 
-def test_shell_output_empty_inputs():
+def test_shell_output_empty_inputs() -> None:
     """Boundary condition: Ensure empty stdout/stderr don't crash the cleaner."""
     mock_result = MagicMock(spec=subprocess.CompletedProcess)
     mock_result.stdout = ""
@@ -45,7 +48,7 @@ def test_shell_output_empty_inputs():
     assert output.stderr == []
 
 
-def test_shell_output_from_called_process_error():
+def test_shell_output_from_called_process_error() -> None:
     """Verify factory works with exception objects (CalledProcessError)."""
     error = subprocess.CalledProcessError(
         returncode=3,

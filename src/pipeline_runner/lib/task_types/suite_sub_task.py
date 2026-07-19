@@ -1,4 +1,6 @@
-from typing import Optional, TYPE_CHECKING
+"""Sub-task implementation with parent-child counter tracking."""
+
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from .suite_task import SuiteTask
 
@@ -7,44 +9,48 @@ if TYPE_CHECKING:
 
 
 class SuiteSubTask(SuiteTask):
-    # Optional to match SuiteTask's own base declaration exactly - a
-    # mutable attribute override must be invariant with its base type, not
-    # just a narrowing of it.
+    """A sub-task that tracks a counter per parent and uses tuple-based IDs."""
+
     _owner: Optional["PipelineSuite"]
-    _parent: Optional[SuiteTask]
+    _parent: SuiteTask | None
+    _attach_printer: bool = False
+    _assigns_own_id: bool = False
 
-    _sub_counter: dict[int, int] = {}
+    _sub_counter: ClassVar[dict[int, int]] = {}
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, attach_printer=False, **kwargs)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize as a sub-task with a tuple ID linking parent to sub-index."""
+        super().__init__(*args, **kwargs)
 
-        if SuiteTask._global_counter not in SuiteSubTask._sub_counter.keys():
-            SuiteSubTask._sub_counter[SuiteTask._global_counter] = 0
+        if SuiteTask.get_count() not in SuiteSubTask._sub_counter:
+            SuiteSubTask._sub_counter[SuiteTask.get_count()] = 0
 
         self._id = (
-            SuiteTask._global_counter,
-            SuiteSubTask._sub_counter[SuiteTask._global_counter],
+            SuiteTask.get_count(),
+            SuiteSubTask._sub_counter[SuiteTask.get_count()],
         )
         self.attach_printer(self._require_owner())
 
-    def msg(self, *args, **kwargs):
-        """Standardized message logger."""
+    def msg(self, *args: Any, **kwargs: Any) -> None:
+        """Log a message and increment the sub-task counter."""
         SuiteSubTask.inc_count()
 
         if self._parent is None:
-            raise ValueError(f"{type(self).__name__} has no parent set")
+            name = type(self).__name__
+            msg = f"{name} has no parent set"
+            raise ValueError(msg)
         self._parent.msg(*args, **kwargs)
 
     @staticmethod
-    def inc_count():
-
-        print(SuiteSubTask._sub_counter)
-        SuiteSubTask._sub_counter[SuiteTask._global_counter] += 1
+    def inc_count() -> None:
+        """Increment the sub-task counter for the current global counter."""
+        SuiteSubTask._sub_counter[SuiteTask.get_count()] += 1
 
     @staticmethod
     def get_sub_counters() -> dict[int, int]:
-        """Distinct from SuiteTask.get_count() (the global task counter) -
-        this returns the per-parent sub-task counter mapping, a different
-        concept that happened to share a name by accident, not a real
-        override of the base method."""
+        """Return the per-parent sub-task counter mapping.
+
+        This is distinct from SuiteTask.get_count() - it tracks sub-tasks
+        per parent rather than the global task count.
+        """
         return SuiteSubTask._sub_counter

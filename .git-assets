@@ -1,3 +1,4 @@
+Makefile
 .git-assets
 .gitignore
 src/pipeline_runner

@@ -1,14 +1,19 @@
+"""Tests for lib.task_types.suite_sub_task_test."""
+
 from unittest.mock import MagicMock
+
 from pipeline_runner.lib.task_types.suite_sub_task import SuiteSubTask
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
 
 class ConcreteSubTask(SuiteSubTask):
-    def _run(self):
+    """Mock class."""
+
+    def _run(self) -> bool:
         return True
 
 
-def test_suite_sub_task_init_and_msg():
+def test_suite_sub_task_init_and_msg() -> None:
     """Verify SubTask identity mapping and messaging delegation."""
     SuiteTask._global_counter = 1
     SuiteSubTask._sub_counter = {}

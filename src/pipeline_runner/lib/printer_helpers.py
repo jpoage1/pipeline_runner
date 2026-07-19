@@ -1,14 +1,18 @@
-import os
+"""Pure helper functions for the printer system."""
+
 import logging
-from typing import List, Optional, Any
+import subprocess
+from typing import Any
 
 from pipeline_runner.lib.types import LogRecord
 
 
 def filter_records(
-    history: List[LogRecord], level: Optional[int] = None, instance_id: Any = None
-) -> List[LogRecord]:
-    """Purely filters LogRecord objects based on criteria."""
+    history: list[LogRecord],
+    level: int | None = None,
+    instance_id: Any = None,
+) -> list[LogRecord]:
+    """Filter LogRecord objects based on criteria."""
     filtered = history
     if level is not None:
         filtered = [r for r in filtered if r.level >= level]
@@ -17,8 +21,8 @@ def filter_records(
     return filtered
 
 
-def serialize_records(history: List[LogRecord]) -> List[dict]:
-    """Purely converts LogRecord objects into a list of serializable dictionaries."""
+def serialize_records(history: list[LogRecord]) -> list[dict[str, Any]]:
+    """Convert LogRecord objects into serializable dictionaries."""
     return [
         {
             "timestamp": r.timestamp.isoformat(),
@@ -31,11 +35,10 @@ def serialize_records(history: List[LogRecord]) -> List[dict]:
 
 
 def reconstruct_message(record: LogRecord) -> str:
-    """Purely reconstructs a printable string from a LogRecord."""
-    # This handles cases where multiple args were passed to print()
+    """Reconstruct a printable string from a LogRecord."""
     return " ".join(map(str, record.args))
 
 
-def clear_screen():
+def clear_screen() -> None:
     """Clear the screen on both NT and *nix systems."""
-    os.system("cls" if os.name == "nt" else "clear")
+    subprocess.run(["/usr/bin/clear"], check=False)

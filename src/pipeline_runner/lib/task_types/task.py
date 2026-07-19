@@ -1,96 +1,93 @@
-from .helpers import get_task_name, prepare_task_init, get_task_status
+"""Static registry-based task lifecycle management."""
+
+from collections.abc import Sequence
+from typing import Any, ClassVar
+
 from pipeline_runner.lib.types import TaskStatus
+
+from .helpers import get_task_name, get_task_status, prepare_task_init
 
 
 class Task:
-    _initialized: bool = False
-    _registry: dict = {}
-    _loaded: dict = {}
-    _completed: dict = {}
-    _owner = None
+    """Manages task registration, instantiation, and execution."""
 
-    # 1. The owner initializes the class
+    _initialized: bool = False
+    _registry: ClassVar[dict[str, type[Any]]] = {}
+    _loaded: ClassVar[dict[str, Any]] = {}
+    _completed: ClassVar[dict[str, Any]] = {}
+    _owner: Any = None
+
     @staticmethod
-    def __init__(owner, task_list):
+    def __init__(owner: Any, task_list: Sequence[Any] | None = None) -> None:
+        """Initialize the task registry with a list of task classes."""
         if Task._initialized:
             return
         Task._owner = owner
-        for task in task_list:
-            # task_name = get_task_name(task)
+        for task in task_list or ():
             task_name = get_task_name(task)
-            print(f"Registring {task_name}")
             Task._registry[task_name] = task
-        return
 
     @staticmethod
-    def add(key):
+    def add(key: Any) -> Any:
+        """Register and instantiate a task, returning the cached instance."""
         name = get_task_name(key)
         status = get_task_status(name, Task._registry, Task._loaded, Task._completed)
 
         if status == TaskStatus.MISSING:
-            raise ValueError(f"Dependency {name} does not exist")
+            msg = f"Dependency {name} does not exist"
+            raise ValueError(msg)
         if status in [TaskStatus.LOADED, TaskStatus.COMPLETED]:
             return Task._loaded[name]
 
         dep_class, args = prepare_task_init(name, Task._registry, Task._owner)
         if dep_class is None or args is None:
-            # prepare_task_init returns (None, None) when name isn't in the
-            # registry - unreachable here in practice (the MISSING status
-            # check above already raises for that case), but the guard
-            # keeps that fact enforced/verifiable rather than assumed.
-            raise ValueError(f"Dependency {name} does not exist")
+            msg = f"Dependency {name} does not exist"
+            raise ValueError(msg)
         task_instance = dep_class(*args)
 
         Task._loaded[name] = task_instance
         return task_instance
 
     @staticmethod
-    def exists(key):
+    def exists(key: Any) -> bool:
+        """Check if a task exists in the registry."""
         name = get_task_name(key)
         return name in Task._registry
 
     @staticmethod
-    def initialized(key):
-        """Returns the initialized object"""
+    def initialized(key: Any) -> bool:
+        """Check if a task has been initialized."""
         key = get_task_name(key)
-        return key in Task._completed.keys()
+        return key in Task._completed
 
-    # 3. Run the task
     @staticmethod
-    def run(key):
-        """Runs a task from the registry"""
+    def run(key: Any) -> Any:
+        """Run a task from the registry, returning the cached or fresh result."""
         key = get_task_name(key)
 
-        # 1. Determine if the task has already ran
         if Task.completed(key):
-            print(f"fetching result for {key}")
             return Task._completed[key]
 
-        # 2. Initialize the dependency
-        # This is harmless if already initialized
-        # due to internal checks
-        task = Task.add(key)  # Also provides the object
-
-        # 3. Run the task and store its result
-        print(f"Running task: {key}")
+        task = Task.add(key)
         result = task.run()
         Task._completed[key] = result
 
         return result
 
     @staticmethod
-    def get_task_name(key):
-        """Convert a raw class to a key"""
+    def get_task_name(key: Any) -> str:
+        """Convert a raw class to a key."""
         if type(key) is not str:
             key = key.__name__
         return key
 
     @staticmethod
-    def completed(key):
-        """Returns a bool if the task has been completed or not"""
+    def completed(key: Any) -> bool:
+        """Return whether a task has been completed."""
         key = get_task_name(key)
-        return key in Task._completed.keys()
+        return key in Task._completed
 
     @staticmethod
-    def get_owner():
+    def get_owner() -> Any:
+        """Return the current owner of the task registry."""
         return Task._owner

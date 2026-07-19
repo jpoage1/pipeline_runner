@@ -1,19 +1,23 @@
+"""Core type definitions for the pipeline runner."""
+
 import re
 import subprocess
-
-from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Union
+from enum import Enum
+from typing import Any
 
 ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-jklmnpqtyuvwyz])")
 
 
-def typename(t):
+def typename(t: Any) -> str:
+    """Return the type name of the given object."""
     return type(t).__name__
 
 
 class Stage(Enum):
+    """Pipeline stage enum."""
+
     ANY = "any"
     BOOTSTRAP = "bootstrap"
     BUILD = "build"
@@ -22,50 +26,60 @@ class Stage(Enum):
 
 
 class TaskStatus(Enum):
-    MISSING = "missing"  # Not in registry
-    REGISTERED = "registered"  # In registry, but not instantiated
-    LOADED = "loaded"  # Instantiated, but not run
-    COMPLETED = "completed"  # Run and result stored
+    """Task lifecycle status."""
+
+    MISSING = "missing"
+    REGISTERED = "registered"
+    LOADED = "loaded"
+    COMPLETED = "completed"
 
 
 class TaskResult(Enum):
+    """Task execution result values."""
+
     SKIPPED = "skipped"
 
 
 @dataclass(frozen=True)
 class LogRecord:
+    """Structured log entry for the printer system."""
+
     timestamp: datetime
     level: int
     message: str
     instance_id: Any
-    args: tuple = field(default_factory=tuple)
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    args: tuple[Any, ...] = field(default_factory=tuple)
+    kwargs: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
-class ShellException(Exception):
+class ShellError(Exception):
     """Exception raised when a shell command fails, wrapping the original error."""
 
-    def __init__(self, original_exception: Exception):
+    def __init__(self, original_exception: Exception) -> None:
+        """Wrap the original exception from shell execution."""
         self.original = original_exception
         super().__init__(f"Shell command failed: {original_exception}")
 
 
 @dataclass
 class ShellOutput:
-    stdout: list[str] = field(default_factory=list)
-    stderr: list[str] = field(default_factory=list)
+    """Captured output from a shell command execution."""
+
+    stdout: list[str] = field(default_factory=list[str])
+    stderr: list[str] = field(default_factory=list[str])
     returncode: int = 0
 
     @classmethod
     def from_subprocess(
-        cls, result: Union[subprocess.CompletedProcess, subprocess.CalledProcessError]
+        cls,
+        result: subprocess.CompletedProcess[bytes] | subprocess.CalledProcessError,
     ) -> "ShellOutput":
-        # Extract and clean strings immediately
-        def clean(out):
+        """Build ShellOutput from a subprocess result, cleaning ANSI codes."""
+
+        def clean(out: Any) -> list[str]:
             if not out:
                 return []
             text = out if isinstance(out, str) else out.decode("utf-8", errors="ignore")
-            # Strip ANSI escape codes
             text = ANSI_ESCAPE.sub("", text)
             return [line.strip() for line in text.splitlines() if line.strip()]
 
@@ -76,6 +90,6 @@ class ShellOutput:
         )
 
     @staticmethod
-    def wrap_exception(e: Exception) -> ShellException:
-        """Wraps a standard exception into a ShellException for consistent error handling."""
-        return ShellException(e)
+    def wrap_exception(e: Exception) -> ShellError:
+        """Wraps a standard exception into a ShellError."""
+        return ShellError(e)

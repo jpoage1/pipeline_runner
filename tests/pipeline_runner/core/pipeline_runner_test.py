@@ -1,21 +1,28 @@
-import pytest
+"""Tests for core.pipeline_runner_test."""
+
+from typing import Any
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from pipeline_runner.core.pipeline_runner import runner
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 
 
 class MockTask(SuiteTask):
-    """A real SuiteTask subclass (matches runner()'s
+    """A real SuiteTask subclass (matches runner()'s.
+
     list[type[SuiteTask]] contract) - PipelineSuite itself is mocked out
     in every test in this file, so this is never actually instantiated,
-    only passed through by reference."""
+    only passed through by reference.
+    """
 
     def _run(self) -> bool:
         return True
 
 
 @pytest.fixture
-def mock_pipeline_suite():
+def mock_pipeline_suite() -> Any:
     """Patches PipelineSuite to prevent actual CLI parsing and task execution."""
     with patch("pipeline_runner.core.pipeline_runner.PipelineSuite") as mock:
         suite_instance = mock.return_value
@@ -28,7 +35,7 @@ def mock_pipeline_suite():
 ## Success Path
 
 
-def test_runner_success(mock_pipeline_suite):
+def test_runner_success(mock_pipeline_suite: Any) -> None:
     """Verify runner completes and dumps queue on success."""
     runner(tasks=[])
 
@@ -40,7 +47,7 @@ def test_runner_success(mock_pipeline_suite):
 ## Exception Handling
 
 
-def test_runner_keyboard_interrupt(mock_pipeline_suite):
+def test_runner_keyboard_interrupt(mock_pipeline_suite: Any) -> None:
     """Verify cleanup logic when KeyboardInterrupt is raised."""
     mock_pipeline_suite.run.side_effect = KeyboardInterrupt()
 
@@ -50,16 +57,15 @@ def test_runner_keyboard_interrupt(mock_pipeline_suite):
         mock_trace.assert_called_once()
         mock_pipeline_suite.dump_print_queue.assert_called()
         mock_pipeline_suite.print.assert_called_with(
-            "\n[System] Termination signal received. Cleaning up..."
+            "\n[System] Termination signal received. Cleaning up...",
         )
 
 
-def test_runner_general_exception(mock_pipeline_suite):
+def test_runner_general_exception(mock_pipeline_suite: Any) -> None:
     """Verify sys.exit(1) and error reporting on generic Exception."""
     mock_pipeline_suite.run.side_effect = Exception("Crash")
 
     with patch("traceback.print_exc"), patch("sys.exit") as mock_exit:
-
         runner(tasks=[])
 
         # Verify queue was dumped before exiting
@@ -71,12 +77,12 @@ def test_runner_general_exception(mock_pipeline_suite):
 ## Logic Verification
 
 
-def test_runner_initializes_with_tasks(mock_pipeline_suite):
+def test_runner_initializes_with_tasks() -> None:
     """Verify that the provided task list is passed to PipelineSuite."""
     tasks = [MockTask, MockTask]
 
     with patch(
-        "pipeline_runner.core.pipeline_runner.PipelineSuite"
+        "pipeline_runner.core.pipeline_runner.PipelineSuite",
     ) as mock_suite_class:
         runner(tasks=tasks)
         mock_suite_class.assert_called_once_with(all_tasks=tasks)

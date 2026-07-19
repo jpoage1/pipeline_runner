@@ -1,7 +1,12 @@
-import pytest
-from unittest.mock import MagicMock, patch
-import argparse
+"""Tests for lib.declarative.declarative_test."""
 
+import argparse
+from typing import ClassVar
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from pipeline_runner.core.suite import PipelineSuite
 from pipeline_runner.lib.declarative import (
     build_task_class,
     build_task_classes,
@@ -9,34 +14,35 @@ from pipeline_runner.lib.declarative import (
 from pipeline_runner.lib.task_types.suite_task import SuiteTask
 from pipeline_runner.lib.task_types.task import Task
 from pipeline_runner.lib.types import TaskResult
-from pipeline_runner.core.suite import PipelineSuite
 
 
 class RecordingTask(SuiteTask):
     """Minimal concrete SuiteTask used as a `type:` target in specs.
+
     should_pass is the only behavior a spec can't set directly (it isn't a
     plain data attribute in the base health-check task types either -
     behavior always comes from the base class, only data comes from the
-    spec), so it's set here instead of via build_task_class."""
+    spec), so it's set here instead of via build_task_class.
+    """
 
     name: str = "Recording Task"
     should_pass: bool = True
-    run_log: list = []  # class-level, shared across instances in a test
+    run_log: ClassVar[list[str]] = []
 
-    def _run(self):
+    def _run(self) -> bool:
         type(self).run_log.append(type(self).__name__)
         return self.should_pass
 
 
 @pytest.fixture(autouse=True)
-def reset_state():
+def reset_state() -> None:
+    """Verify reset_state."""
     Task._initialized = False
     Task._registry = {}
     Task._loaded = {}
     Task._completed = {}
     Task._owner = None
     RecordingTask.run_log = []
-    yield
 
 
 TYPE_REGISTRY = {"recording": RecordingTask}
@@ -45,7 +51,8 @@ TYPE_REGISTRY = {"recording": RecordingTask}
 ## build_task_class / build_task_classes
 
 
-def test_build_task_class_sets_id_as_class_name():
+def test_build_task_class_sets_id_as_class_name() -> None:
+    """Verify build_task_class_sets_id_as_class_name."""
     cls = build_task_class(
         {"id": "CheckThing", "type": "recording", "skip": True},
         TYPE_REGISTRY,
@@ -59,11 +66,13 @@ def test_build_task_class_sets_id_as_class_name():
     assert cls.skip is True
 
 
-def test_build_task_class_leaves_name_attribute_untouched():
-    """`id` (registry key / class name) and `name` (SuiteTask's own
-    human-readable display attribute, used in self.msg(self.name)) are
+def test_build_task_class_leaves_name_attribute_untouched() -> None:
+    """Verify `id` and `name` attributes are preserved separately.
+
+    `id` (registry key / class name) and `name` (SuiteTask's own
     separate fields - setting `name` in a spec must not collide with `id`
-    or get dropped, the same as any other hand-written check class."""
+    or get dropped, the same as any other hand-written check class.
+    """
     cls = build_task_class(
         {"id": "CheckThing", "type": "recording", "name": "Check the thing"},
         TYPE_REGISTRY,
@@ -73,7 +82,8 @@ def test_build_task_class_leaves_name_attribute_untouched():
     assert cls.name == "Check the thing"
 
 
-def test_build_task_class_deps_becomes_underscore_deps():
+def test_build_task_class_deps_becomes_underscore_deps() -> None:
+    """Verify build_task_class_deps_becomes_underscore_deps."""
     cls = build_task_class(
         {"id": "Dependent", "type": "recording", "deps": ["Other"]},
         TYPE_REGISTRY,
@@ -82,29 +92,34 @@ def test_build_task_class_deps_becomes_underscore_deps():
     assert cls._deps == ["Other"]
 
 
-def test_build_task_class_missing_id_raises():
+def test_build_task_class_missing_id_raises() -> None:
+    """Verify build_task_class_missing_id_raises."""
     with pytest.raises(ValueError, match="missing required 'id'"):
         build_task_class({"type": "recording"}, TYPE_REGISTRY)
 
 
-def test_build_task_class_missing_type_raises():
+def test_build_task_class_missing_type_raises() -> None:
+    """Verify build_task_class_missing_type_raises."""
     with pytest.raises(ValueError, match="missing required 'type'"):
         build_task_class({"id": "Foo"}, TYPE_REGISTRY)
 
 
-def test_build_task_class_unknown_type_raises():
+def test_build_task_class_unknown_type_raises() -> None:
+    """Verify build_task_class_unknown_type_raises."""
     with pytest.raises(ValueError, match="unknown type 'bogus'"):
         build_task_class({"id": "Foo", "type": "bogus"}, TYPE_REGISTRY)
 
 
-def test_build_task_class_does_not_mutate_input_spec():
+def test_build_task_class_does_not_mutate_input_spec() -> None:
+    """Verify build_task_class_does_not_mutate_input_spec."""
     spec = {"id": "Foo", "type": "recording", "deps": ["Bar"]}
     build_task_class(spec, TYPE_REGISTRY)
 
     assert spec == {"id": "Foo", "type": "recording", "deps": ["Bar"]}
 
 
-def test_build_task_classes_preserves_order():
+def test_build_task_classes_preserves_order() -> None:
+    """Verify build_task_classes_preserves_order."""
     specs = [
         {"id": "First", "type": "recording"},
         {"id": "Second", "type": "recording"},
@@ -122,7 +137,8 @@ def test_build_task_classes_preserves_order():
 
 
 @patch("argparse.ArgumentParser.parse_args")
-def test_string_deps_resolve_and_run_before_dependents(mock_parse):
+def test_string_deps_resolve_and_run_before_dependents(mock_parse: MagicMock) -> None:
+    """Verify string_deps_resolve_and_run_before_dependents."""
     mock_parse.return_value = argparse.Namespace(
         task=None,
         full_pipeline=True,
@@ -161,7 +177,8 @@ def test_string_deps_resolve_and_run_before_dependents(mock_parse):
 
 
 @patch("argparse.ArgumentParser.parse_args")
-def test_failing_string_dep_skips_dependent_task(mock_parse):
+def test_failing_string_dep_skips_dependent_task(mock_parse: MagicMock) -> None:
+    """Verify failing_string_dep_skips_dependent_task."""
     mock_parse.return_value = argparse.Namespace(
         task=None,
         full_pipeline=True,
@@ -188,11 +205,16 @@ def test_failing_string_dep_skips_dependent_task(mock_parse):
 
 
 @patch("argparse.ArgumentParser.parse_args")
-def test_a_failing_task_result_is_still_recorded_not_raised(mock_parse):
-    """pipeline_runner's own design goal (see health_runner.py's docstring
+def test_a_failing_task_result_is_still_recorded_not_raised(
+    mock_parse: MagicMock,
+) -> None:
+    """Verify a failing task result is still recorded, not raised.
+
+    pipeline_runner's own design goal (see health_runner.py's docstring
     in the health_check project) is to keep running and record False rather
     than raise/crash on an ordinary check failure - confirm a spec-built
-    task participates in that the same way a hand-written one does."""
+    task participates in that the same way a hand-written one does.
+    """
     mock_parse.return_value = argparse.Namespace(
         task=None,
         full_pipeline=True,
