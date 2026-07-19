@@ -19,10 +19,46 @@ pythonpath = ["src"]
 testpaths = ["tests/pipeline_runner"]
 python_files = ["test_*.py", "*_test.py"]
 
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
 [tool.ruff]
 src = ["src"]
 target-version = "py313"
 
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific rules
+    "ANN",  # flake8-annotations
+    "FA",   # flake8-future-annotations
+]
+
+[tool.ruff.lint.flake8-annotations]
+# Enforce that Any is completely banned, even for *args and **kwargs
+allow-any-expr = false
+allow-init-nested-returns = false
+suppress-none-returning = false
+mypy-init-return = false
+suppress-dummy-args = false
+
+[tool.ruff.lint.per-file-ignores]
+"**" = [
+    "ANN401",  # any-type — required for delegation patterns (*args: Any)
+]
+
 [tool.pyright]
+typeCheckingMode = "strict"
 include = ["src", "tests"]
 pythonVersion = "3.13"
+reportExplicitAny = "error"
+reportImplicitAny = "error"
