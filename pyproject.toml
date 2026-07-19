@@ -34,18 +34,20 @@ convention = "google"
 [tool.ruff.lint]
 select = [
    "ALL",
-    # "E",    # pycodestyle errors
-    # "W",    # pycodestyle warnings
-    # "F",    # pyflakes
-    # "I",    # isort
-    # "B",    # flake8-bugbear
-    # "UP",   # pyupgrade
-    # "A",    # flake8-builtins
-    # "C4",   # flake8-comprehensions
-    # "SIM",  # flake8-simplify
-    # "RUF",  # Ruff-specific rules
-    # "ANN",  # flake8-annotations
-    # "FA",   # flake8-future-annotations
+   # "RUF100", # Unused noqa (Flags inline ignores that are no longer needed)
+   #  "PGH004", # Use of blanket noqa (Flags any raw '# noqa' without a rule code)
+   #  "E",    # pycodestyle errors
+   #  "W",    # pycodestyle warnings
+   #  "F",    # pyflakes
+   #  "I",    # isort
+   #  "B",    # flake8-bugbear
+   #  "UP",   # pyupgrade
+   #  "A",    # flake8-builtins
+   #  "C4",   # flake8-comprehensions
+   #  "SIM",  # flake8-simplify
+   #  "RUF",  # Ruff-specific rules
+   #  "ANN",  # flake8-annotations
+   #  "FA",   # flake8-future-annotations
 ]
 
 [tool.ruff.lint.pylint]
@@ -78,4 +80,20 @@ typeCheckingMode = "strict"
 include = ["src", "tests"]
 pythonVersion = "3.13"
 reportExplicitAny = "error"
+# Treat inline ignores as a build-breaking failure
+reportUnnecessaryTypeIgnoreComment = "error"
+reportUnknownVariableType = "error"
+reportUnknownArgumentType = "error"
 
+[tool.mypy]
+strict = true
+
+# Throw an error if a developer adds a '# type: ignore' comment
+warn_unused_ignores = true
+
+# Throw an error if configurations try to ignore missing modules globally
+ignore_missing_imports = false
+
+# Ensure modules without type hints are treated as errors rather than falling back to Any
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
