@@ -1,6 +1,7 @@
 {
   lib,
   python3Packages,
+  black,
   ruff,
   pyright,
 }: let
@@ -20,6 +21,7 @@
   ];
 
   lintDeps = [
+    black
     ruff
     pyright
   ];
@@ -56,6 +58,8 @@ in
     checkPhase = ''
       runHook preCheck
 
+      ./scripts/enforce-strict-linting.sh
+
       echo "[check] ruff lint..."
       ruff check src tests
 
@@ -63,7 +67,7 @@ in
       pyright --pythonpath ${checkPythonEnv}/bin/python src tests
 
       echo "[check] pytest..."
-      pytest
+      pytest --cov=pipeline_runner --cov-report=term-missing --cov-fail-under=100
 
       runHook postCheck
     '';
