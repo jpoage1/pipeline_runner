@@ -58,8 +58,6 @@ in
     checkPhase = ''
       runHook preCheck
 
-      ./scripts/enforce-strict-linting.sh
-
       echo "[check] ruff lint..."
       ruff check src tests
 

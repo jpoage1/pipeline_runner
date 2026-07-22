@@ -7,6 +7,9 @@ name = "pipeline_runner"
 version = "0.1.1"
 dependencies = ["pyyaml"]
 
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "hypothesis"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
